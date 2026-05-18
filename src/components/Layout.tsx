@@ -1,7 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { ReducedMotionToggle } from "@/components/ReducedMotionToggle";
-
+import { AnimatedThemeToggler } from "@/components/AnimatedThemeToggler";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,7 +19,6 @@ const Layout = ({ children }: LayoutProps) => {
 
             <div className="ml-auto flex items-center gap-2">
               <AnimatedThemeToggler />
-              <ReducedMotionToggle />
               <SidebarTrigger />
             </div>
           </header>
