@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Brain, Award, Trophy, Target, Lightbulb, Puzzle, Clock } from "lucide-react";
+import { Brain, Award, Trophy, Target, Lightbulb, Puzzle, Clock, Activity, Heart, Moon, Droplet, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError, showInfo, showWarning } from "@/lib/toast-helpers";
 
-interface GameScore {
-  game: string;
-  score: number;
-  timestamp: Date;
+interface TrendQuestion {
+  id: number;
+  metricType: "steps" | "heart_rate" | "sleep" | "water";
+  values: number[];
+  pattern: string;
+  patternDescription: string;
+  correctAnswer: number;
+  options: number[];
 }
 
 const BrainGames = () => {
@@ -22,12 +26,237 @@ const BrainGames = () => {
   const [userSequence, setUserSequence] = useState<{ word: string; index: number }[]>([]);
   const [wordPhase, setWordPhase] = useState<"memorize" | "recall">("memorize");
   const [timeLeft, setTimeLeft] = useState(10);
+  
+  // Pattern Recognition Game States
+  const [patternScore, setPatternScore] = useState(0);
+  const [patternStreak, setPatternStreak] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState<TrendQuestion | null>(null);
+  const [showPatternFeedback, setShowPatternFeedback] = useState(false);
+  const [isPatternCorrect, setIsPatternCorrect] = useState(false);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [gameCompleted, setGameCompleted] = useState(false);
+  const TOTAL_QUESTIONS = 10;
+  
   const { toast } = useToast();
 
   const healthWords = [
     "Heart", "Brain", "Vitamin", "Exercise", "Nutrition", "Sleep",
     "Wellness", "Fitness", "Immune", "Cardio", "Protein", "Hydration"
   ];
+
+  // Generate a new trend question
+  const generateTrendQuestion = (): TrendQuestion => {
+    const metricTypes = ["steps", "heart_rate", "sleep", "water"] as const;
+    const metricType = metricTypes[Math.floor(Math.random() * metricTypes.length)];
+    
+    // Define patterns
+    const patterns = [
+      { 
+        name: "increasing", 
+        getValue: (i: number, start: number) => start + (i * 5), 
+        step: 5,
+        description: "Increasing by 5 each day"
+      },
+      { 
+        name: "increasing_fast", 
+        getValue: (i: number, start: number) => start + (i * 10), 
+        step: 10,
+        description: "Increasing by 10 each day"
+      },
+      { 
+        name: "decreasing", 
+        getValue: (i: number, start: number) => start - (i * 5), 
+        step: 5,
+        description: "Decreasing by 5 each day"
+      },
+      { 
+        name: "decreasing_fast", 
+        getValue: (i: number, start: number) => start - (i * 10), 
+        step: 10,
+        description: "Decreasing by 10 each day"
+      },
+      { 
+        name: "multiply", 
+        getValue: (i: number, start: number) => start * Math.pow(2, i), 
+        step: "x2",
+        description: "Doubling each day"
+      },
+      { 
+        name: "alternating", 
+        getValue: (i: number, start: number) => i % 2 === 0 ? start : start + 15, 
+        step: 15,
+        description: "Alternating between two values"
+      }
+    ];
+    
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    
+    // Set start value based on metric type
+    let startValue = 0;
+    switch(metricType) {
+      case "steps": startValue = Math.floor(Math.random() * 3000) + 4000; break;
+      case "heart_rate": startValue = Math.floor(Math.random() * 30) + 60; break;
+      case "sleep": startValue = Math.floor(Math.random() * 3) + 5; break;
+      case "water": startValue = Math.floor(Math.random() * 4) + 4; break;
+    }
+    
+    // Generate 3 values for days 1-3
+    const values = [];
+    for (let i = 0; i < 3; i++) {
+      let val = pattern.getValue(i, startValue);
+      // Round to 1 decimal for sleep/water, integer for others
+      if (metricType === "sleep" || metricType === "water") {
+        val = Math.round(val * 10) / 10;
+      } else {
+        val = Math.round(val);
+      }
+      values.push(val);
+    }
+    
+    // Calculate day 4 value
+    let correctAnswer = pattern.getValue(3, startValue);
+    if (metricType === "sleep" || metricType === "water") {
+      correctAnswer = Math.round(correctAnswer * 10) / 10;
+    } else {
+      correctAnswer = Math.round(correctAnswer);
+    }
+    
+    // Generate wrong options
+    const options = [correctAnswer];
+    while (options.length < 4) {
+      let offset = 0;
+      if (pattern.name.includes("increasing")) {
+        offset = Math.floor(Math.random() * 15) + 5;
+        const wrongOption = correctAnswer - offset;
+        if (!options.includes(wrongOption) && wrongOption > 0) {
+          options.push(wrongOption);
+        }
+      } else if (pattern.name.includes("decreasing")) {
+        offset = Math.floor(Math.random() * 15) + 5;
+        const wrongOption = correctAnswer + offset;
+        if (!options.includes(wrongOption)) {
+          options.push(wrongOption);
+        }
+      } else {
+        offset = Math.floor(Math.random() * 20) + 10;
+        const wrongOption = correctAnswer + (Math.random() > 0.5 ? offset : -offset);
+        if (!options.includes(wrongOption) && wrongOption > 0) {
+          options.push(wrongOption);
+        }
+      }
+    }
+    
+    return {
+      id: Date.now(),
+      metricType,
+      values,
+      pattern: pattern.name,
+      patternDescription: pattern.description,
+      correctAnswer,
+      options: options.sort(() => Math.random() - 0.5)
+    };
+  };
+
+  const startPatternGame = () => {
+    setPatternScore(0);
+    setPatternStreak(0);
+    setQuestionsAnswered(0);
+    setGameCompleted(false);
+    const question = generateTrendQuestion();
+    setCurrentQuestion(question);
+    setShowPatternFeedback(false);
+    setActiveGame("pattern");
+    showSuccess("Pattern Recognition Started!", "Complete the health trend by finding Day 4 value");
+  };
+
+  const handlePatternAnswer = (answer: number) => {
+    if (showPatternFeedback || !currentQuestion || gameCompleted) return;
+    
+    const isCorrect = answer === currentQuestion.correctAnswer;
+    setIsPatternCorrect(isCorrect);
+    setShowPatternFeedback(true);
+    const newQuestionsCount = questionsAnswered + 1;
+    setQuestionsAnswered(newQuestionsCount);
+    
+    if (isCorrect) {
+      const points = 10;
+      const newScore = patternScore + points;
+      const newStreak = patternStreak + 1;
+      setPatternScore(newScore);
+      setPatternStreak(newStreak);
+      
+      showSuccess("✓ Correct Trend!", `+${points} points! Streak: ${newStreak}`);
+      
+      toast({
+        title: "✓ Correct!",
+        description: `Day 4 value is ${currentQuestion.correctAnswer}`,
+      });
+    } else {
+      setPatternStreak(0);
+      showError("✗ Incorrect", `The correct trend was: ${currentQuestion.patternDescription}`);
+      
+      toast({
+        title: "✗ Incorrect",
+        description: `Day 4 should be ${currentQuestion.correctAnswer}. ${currentQuestion.patternDescription}`,
+        variant: "destructive",
+      });
+    }
+    
+    // Check if game completed
+    if (newQuestionsCount >= TOTAL_QUESTIONS) {
+      setGameCompleted(true);
+      showSuccess("🎉 Game Complete! 🎉", `Final Score: ${patternScore + (isCorrect ? 10 : 0)}/${TOTAL_QUESTIONS * 10}`);
+      return;
+    }
+    
+    // Load next question after delay
+    setTimeout(() => {
+      const nextQuestion = generateTrendQuestion();
+      setCurrentQuestion(nextQuestion);
+      setShowPatternFeedback(false);
+    }, 2000);
+  };
+
+  const resetPatternGame = () => {
+    setPatternScore(0);
+    setPatternStreak(0);
+    setQuestionsAnswered(0);
+    setGameCompleted(false);
+    const question = generateTrendQuestion();
+    setCurrentQuestion(question);
+    setShowPatternFeedback(false);
+    showInfo("Game Restarted", "Try to beat your previous score!");
+  };
+
+  const getMetricIcon = (type: string) => {
+    switch(type) {
+      case "steps": return <Activity className="w-6 h-6 text-green-500" />;
+      case "heart_rate": return <Heart className="w-6 h-6 text-red-500" />;
+      case "sleep": return <Moon className="w-6 h-6 text-purple-500" />;
+      case "water": return <Droplet className="w-6 h-6 text-blue-500" />;
+      default: return <TrendingUp className="w-6 h-6 text-orange-500" />;
+    }
+  };
+
+  const getMetricTitle = (type: string) => {
+    switch(type) {
+      case "steps": return "Daily Steps";
+      case "heart_rate": return "Heart Rate (BPM)";
+      case "sleep": return "Sleep (Hours)";
+      case "water": return "Water Intake (Glasses)";
+      default: return "Health Metric";
+    }
+  };
+
+  const getMetricUnit = (type: string) => {
+    switch(type) {
+      case "steps": return "steps";
+      case "heart_rate": return "BPM";
+      case "sleep": return "hours";
+      case "water": return "glasses";
+      default: return "";
+    }
+  };
 
   const startMemoryGame = () => {
     const cards = [...Array(8)].map((_, i) => i % 4);
@@ -95,7 +324,6 @@ const BrainGames = () => {
         setMatchedCards([...matchedCards, first, second]);
         setFlippedCards([]);
         
-        // Show success when a pair is matched
         showSuccess("Match Found!", `You matched a pair! (${matchedCards.length / 2 + 1}/${memoryCards.length / 2})`);
 
         if (matchedCards.length + 2 === memoryCards.length) {
@@ -106,7 +334,6 @@ const BrainGames = () => {
           });
         }
       } else {
-        // Show info when no match
         setTimeout(() => {
           showWarning("No match", "Try again!");
         }, 500);
@@ -162,10 +389,161 @@ const BrainGames = () => {
       id: "pattern",
       name: "Pattern Recognition",
       icon: Puzzle,
-      description: "Identify patterns in health data visualizations (Coming Soon)",
+      description: "Complete the health trend by finding the next day's value",
       color: "from-orange-500 to-red-500",
     },
   ];
+
+  // Render Pattern Recognition Game
+  const renderPatternGame = () => {
+    if (gameCompleted) {
+      const maxScore = TOTAL_QUESTIONS * 10;
+      const percentage = (patternScore / maxScore) * 100;
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">🎉 Game Complete! 🎉</CardTitle>
+            <CardDescription className="text-center">Great job spotting the trends!</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 text-center">
+            <div className="p-8 bg-gradient-to-br from-primary/10 to-primary-glow/10 rounded-xl">
+              <Trophy className="w-16 h-16 mx-auto text-primary mb-4" />
+              <p className="text-3xl font-bold mb-2">{patternScore} / {maxScore}</p>
+              <p className="text-muted-foreground">Final Score</p>
+              <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-500 rounded-full"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+              <p className="mt-4 text-sm">
+                {percentage >= 80 ? "🌟 Outstanding! Health trend expert!" :
+                 percentage >= 60 ? "👍 Good job! Keep practicing!" :
+                 "💪 Keep learning! Try again to improve!"}
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <Button onClick={resetPatternGame} className="flex-1">
+                Play Again
+              </Button>
+              <Button variant="outline" onClick={() => setActiveGame(null)} className="flex-1">
+                Back to Games
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    if (!currentQuestion) return null;
+    
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between flex-wrap gap-2">
+            <span className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Complete the Health Trend
+            </span>
+            <div className="flex gap-2 items-center flex-wrap">
+              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-lg">
+                <Trophy className="w-4 h-4 text-primary" />
+                <span className="font-bold">{patternScore}</span>
+              </div>
+              <div className="flex items-center gap-2 bg-secondary/10 px-3 py-1 rounded-lg">
+                <Target className="w-4 h-4 text-secondary" />
+                <span className="font-bold">Streak: {patternStreak}</span>
+              </div>
+              <div className="flex items-center gap-2 bg-accent/10 px-3 py-1 rounded-lg">
+                <Brain className="w-4 h-4 text-accent" />
+                <span className="font-bold">Q{questionsAnswered + 1}/{TOTAL_QUESTIONS}</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setActiveGame(null)}>
+                Exit Game
+              </Button>
+            </div>
+          </CardTitle>
+          <CardDescription>
+            Identify the pattern and find Day 4 value
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Data Visualization */}
+          <div className="p-6 bg-accent/30 rounded-xl">
+            <div className="flex items-center justify-center gap-2 mb-6">
+              {getMetricIcon(currentQuestion.metricType)}
+              <h3 className="text-lg font-semibold">{getMetricTitle(currentQuestion.metricType)}</h3>
+            </div>
+            
+            {/* Bar Chart */}
+            <div className="flex items-end justify-center gap-6 h-48 mb-6">
+              {currentQuestion.values.map((value, index) => {
+                let maxValue = 0;
+                switch(currentQuestion.metricType) {
+                  case "steps": maxValue = 15000; break;
+                  case "heart_rate": maxValue = 150; break;
+                  case "sleep": maxValue = 12; break;
+                  case "water": maxValue = 10; break;
+                }
+                const height = (value / maxValue) * 120;
+                return (
+                  <div key={index} className="flex flex-col items-center gap-2">
+                    <div 
+                      className="w-16 bg-gradient-to-t from-primary to-primary-glow rounded-t-lg transition-all"
+                      style={{ height: `${Math.max(40, height)}px` }}
+                    />
+                    <span className="text-xl font-bold">{value}</span>
+                    <span className="text-xs text-muted-foreground">Day {index + 1}</span>
+                  </div>
+                );
+              })}
+              {/* Question Mark for Day 4 */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-16 bg-muted rounded-t-lg flex items-center justify-center" style={{ height: "80px" }}>
+                  <span className="text-3xl text-muted-foreground">?</span>
+                </div>
+                <span className="text-xl font-bold text-muted-foreground">???</span>
+                <span className="text-xs text-muted-foreground">Day 4</span>
+              </div>
+            </div>
+            
+            <p className="text-center text-sm text-muted-foreground">
+              Look at the pattern from Day 1 → Day 2 → Day 3
+            </p>
+          </div>
+
+          {/* Options */}
+          <div className="grid grid-cols-2 gap-3">
+            {currentQuestion.options.map((option, idx) => (
+              <Button
+                key={idx}
+                variant={showPatternFeedback && option === currentQuestion.correctAnswer ? "default" : "outline"}
+                className="text-lg py-6"
+                onClick={() => handlePatternAnswer(option)}
+                disabled={showPatternFeedback}
+              >
+                {option} {getMetricUnit(currentQuestion.metricType)}
+              </Button>
+            ))}
+          </div>
+
+          {/* Feedback */}
+          {showPatternFeedback && (
+            <div className={`p-4 rounded-lg text-center ${isPatternCorrect ? "bg-green-500/10 border border-green-500" : "bg-red-500/10 border border-red-500"}`}>
+              <p className={isPatternCorrect ? "text-green-600" : "text-red-600"}>
+                {isPatternCorrect 
+                  ? `✅ Correct! Day 4 should be ${currentQuestion.correctAnswer} ${getMetricUnit(currentQuestion.metricType)}` 
+                  : `❌ Incorrect! The pattern was: ${currentQuestion.patternDescription}`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {currentQuestion.patternDescription}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -191,9 +569,7 @@ const BrainGames = () => {
                   if (game.id === "memory") startMemoryGame();
                   else if (game.id === "math") startMathGame();
                   else if (game.id === "word") startWordGame();
-                  else if (game.id === "pattern") {
-                    showInfo("Coming Soon!", "This game is under development");
-                  }
+                  else if (game.id === "pattern") startPatternGame();
                 }}
               >
                 <CardHeader>
@@ -204,11 +580,8 @@ const BrainGames = () => {
                   <CardDescription>{game.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button
-                    className="w-full"
-                    disabled={game.id === "pattern"}
-                  >
-                    {game.id === "pattern" ? "Coming Soon" : "Play Now"}
+                  <Button className="w-full">
+                    Play Now
                   </Button>
                 </CardContent>
               </Card>
@@ -216,6 +589,7 @@ const BrainGames = () => {
           })}
         </div>
       ) : activeGame === "memory" ? (
+        // Memory Game UI (unchanged)
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -257,6 +631,7 @@ const BrainGames = () => {
           </CardContent>
         </Card>
       ) : activeGame === "math" ? (
+        // Math Game UI (unchanged)
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -299,6 +674,7 @@ const BrainGames = () => {
           </CardContent>
         </Card>
       ) : activeGame === "word" ? (
+        // Word Game UI (unchanged)
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -317,7 +693,6 @@ const BrainGames = () => {
               <div className="p-6 bg-accent rounded-xl">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Words to memorize:</h3>
-
                   {wordPhase === "memorize" && (
                     <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary font-semibold">
                       <Clock className="w-4 h-4" />
@@ -327,10 +702,7 @@ const BrainGames = () => {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {wordPhase === "memorize" && wordSequence.map((word, idx) => (
-                    <div
-                      key={idx}
-                      className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold text-lg"
-                    >
+                    <div key={idx} className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold text-lg">
                       {word}
                     </div>
                   ))}
@@ -367,10 +739,7 @@ const BrainGames = () => {
                   <h3 className="text-lg font-semibold mb-4">Your sequence:</h3>
                   <div className="flex flex-wrap gap-3">
                     {userSequence.map((word, idx) => (
-                      <div
-                        key={idx}
-                        className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-semibold"
-                      >
+                      <div key={idx} className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-semibold">
                         {word.word}
                       </div>
                     ))}
@@ -380,25 +749,12 @@ const BrainGames = () => {
               <div className="flex gap-4">
                 <Button
                   onClick={() => {
-                    const correct =
-                      wordSequence.length === userSequence.length &&
-                      wordSequence.every((word, i) => word === userSequence[i].word);
-                    
+                    const correct = wordSequence.length === userSequence.length && wordSequence.every((word, i) => word === userSequence[i].word);
                     if (correct) {
                       showSuccess("🎉 Perfect Memory! 🎉", "You recalled all words correctly!");
-                      toast({
-                        title: "🎉 Perfect!",
-                        description: "You recalled all words correctly!",
-                        variant: "default",
-                      });
                     } else {
                       const correctWords = userSequence.filter((word, i) => word.word === wordSequence[i]).length;
                       showError("❌ Not quite right", `You got ${correctWords} out of ${wordSequence.length} correct`);
-                      toast({
-                        title: "❌ Not quite",
-                        description: `You got ${correctWords} out of ${wordSequence.length} correct`,
-                        variant: "destructive",
-                      });
                     }
                   }}
                   disabled={userSequence.length !== wordSequence.length}
@@ -412,17 +768,15 @@ const BrainGames = () => {
                 }}>
                   Reset Selections
                 </Button>
-
-                <Button variant="secondary" onClick={() => {
-                  startWordGame();
-                  showInfo("Game Restarted", "New words to memorize!");
-                }}>
+                <Button variant="secondary" onClick={startWordGame}>
                   Restart Game
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
+      ) : activeGame === "pattern" ? (
+        renderPatternGame()
       ) : null}
 
       <Card className="bg-gradient-to-br from-primary/5 to-primary-glow/5 border-primary/20">
