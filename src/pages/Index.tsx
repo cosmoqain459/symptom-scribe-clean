@@ -9,6 +9,17 @@ import Hero from "@/components/Hero";
 import { ArrowRight, Brain, Clock, TrendingUp, Users, Star, CheckCircle2, Heart, Activity, Shield, Menu, X } from "lucide-react";
 import { AnimatedThemeToggler } from "@/components/AnimatedThemeToggler";
 import { BackToTop } from "@/components/BackToTop";
+import { 
+  Github,
+  ExternalLink,
+  Sparkles,
+  BookOpen,
+  HelpCircle,
+  FileText,
+  Lock,
+  AlertCircle,
+  Mail
+} from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -415,51 +426,109 @@ const Index = () => {
           </p>
         </motion.div>
       </section>
+      <footer className="border-t border-border bg-gradient-to-b from-background to-muted/30">
+  <div className="container mx-auto px-4 py-12">
+    <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-10">
+      {/* Brand Column */}
+<div className="lg:col-span-2">
+  <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
+    <Activity className="w-6 h-6 text-primary" />
+    <span className="text-foreground font-bold">
+      Symptom Scribe
+    </span>
+  </h3>
+  <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-sm">
+    Your intelligent health companion for symptom analysis, health tracking, and wellness insights powered by AI.
+  </p>
+  {/* GitHub Link */}
+  <a 
+    href="https://github.com/mohdmaazgani/symptom-scribe-clean.git" 
+    target="_blank" 
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-accent transition-all duration-300 text-sm w-fit"
+  >
+    <Github className="w-4 h-4" />
+    <span>View on GitHub</span>
+    <ExternalLink className="w-3 h-3" />
+  </a>
+</div>
       
-      <footer className="border-t border-border py-8 px-4">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="font-bold mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-primary" />
-                Smart Health Tracker
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Your personal health companion powered by AI
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Features</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors">AI Analysis</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Health Tracking</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Brain Games</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Emergency Help</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Resources</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors">Health Facts</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">FAQ</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Terms of Service</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Contact</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors">Support</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Feedback</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">About Us</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-border pt-6 text-center text-sm text-muted-foreground">
-            <p>© 2025 Smart Health Tracker. Built for hackathon demonstration. Not a substitute for professional medical advice.</p>
-          </div>
+      {/* Platform Column */}
+      <div>
+        <h4 className="font-semibold mb-4 text-foreground flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          Platform
+        </h4>
+        <ul className="space-y-3 text-sm">
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Brain className="w-4 h-4" /> AI Symptom Checker</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Health Metrics</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Clock className="w-4 h-4" /> Consultation History</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Brain className="w-4 h-4" /> Brain Training</a></li>
+        </ul>
+      </div>
+      
+      {/* Resources Column */}
+      <div>
+        <h4 className="font-semibold mb-4 text-foreground flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-primary" />
+          Resources
+        </h4>
+        <ul className="space-y-3 text-sm">
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Heart className="w-4 h-4" /> Health Library</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Shield className="w-4 h-4" /> Emergency Guide</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><HelpCircle className="w-4 h-4" /> FAQ</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><FileText className="w-4 h-4" /> Blog</a></li>
+        </ul>
+      </div>
+      
+      {/* Legal Column */}
+      <div>
+        <h4 className="font-semibold mb-4 text-foreground flex items-center gap-2">
+          <Shield className="w-4 h-4 text-primary" />
+          Legal
+        </h4>
+        <ul className="space-y-3 text-sm">
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Lock className="w-4 h-4" /> Privacy Policy</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><FileText className="w-4 h-4" /> Terms of Service</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Medical Disclaimer</a></li>
+          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Mail className="w-4 h-4" /> Contact Support</a></li>
+        </ul>
+      </div>
+    </div>
+    
+    {/* Bottom Bar - Centered */}
+    <div className="border-t border-border pt-6 mt-4">
+      <div className="flex flex-col items-center justify-center gap-4 text-center">
+        <p className="text-muted-foreground">
+          © 2026 Symptom Scribe. All rights reserved.
+        </p>
+        <div className="flex gap-6">
+          <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs">
+            Privacy
+          </a>
+          <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs">
+            Terms
+          </a>
+          <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs">
+            Disclaimer
+          </a>
+          <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs">
+            Accessibility
+          </a>
         </div>
-      </footer>
+      </div>
+      
+      {/* Medical Disclaimer - Subtle */}
+      <div className="text-center mt-6 pt-4 border-t border-border/50">
+        <p className="text-xs text-muted-foreground/60 flex items-center justify-center gap-2 flex-wrap">
+          <AlertCircle className="w-3 h-3" />
+          <span>For informational purposes only. Always consult a qualified healthcare provider for medical advice.</span>
+          <Heart className="w-3 h-3" />
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
       <BackToTop />
     </div>
   );
