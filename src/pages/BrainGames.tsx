@@ -9,6 +9,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError, showInfo, showWarning } from "@/lib/toast-helpers";
 import confetti from 'canvas-confetti';
+import { shuffleArray } from "@/lib/utils";
 
 interface TrendQuestion {
   id: number;
@@ -114,7 +115,7 @@ const wordTimeoutRef = useRef<number | null>(null);
       if (timerRef.current) clearInterval(timerRef.current);
       
       setQuestionTimeLeft(15);
-      timerRef.current = setInterval(() => {
+      timerRef.current = window.setInterval(() => {
         setQuestionTimeLeft(prev => {
           if (prev <= 1) {
             // Time's up - auto answer incorrect
@@ -126,7 +127,7 @@ const wordTimeoutRef = useRef<number | null>(null);
           }
           return prev - 1;
         });
-      }, 1000);
+      }, 1000) as unknown as number;
       
       return () => {
         if (timerRef.current) clearInterval(timerRef.current);
@@ -201,7 +202,7 @@ const wordTimeoutRef = useRef<number | null>(null);
       pattern: pattern.name,
       patternDescription: pattern.description,
       correctAnswer,
-      options: options.sort(() => Math.random() - 0.5)
+      options: shuffleArray(options)
     };
   };
 
@@ -238,8 +239,8 @@ const wordTimeoutRef = useRef<number | null>(null);
     if (lifelineUsed || !currentQuestion || showPatternFeedback) return;
     
     const wrongOptions = currentQuestion.options.filter(opt => opt !== currentQuestion.correctAnswer);
-    const randomWrong = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 2);
-    const newOptions = [currentQuestion.correctAnswer, ...randomWrong].sort(() => Math.random() - 0.5);
+    const randomWrong = shuffleArray(wrongOptions).slice(0, 1);
+    const newOptions = shuffleArray([currentQuestion.correctAnswer, ...randomWrong]);
     
     setFilteredOptions(newOptions);
     setLifelineUsed(true);
@@ -327,6 +328,7 @@ const wordTimeoutRef = useRef<number | null>(null);
       setCurrentQuestion(nextQuestion);
       setFilteredOptions([]);
       setShowPatternFeedback(false);
+      setLifelineUsed(false);
     }, 2000);
   };
 
@@ -379,7 +381,7 @@ const wordTimeoutRef = useRef<number | null>(null);
 
   const startMemoryGame = () => {
     const cards = [...Array(8)].map((_, i) => i % 4);
-    setMemoryCards(cards.sort(() => Math.random() - 0.5));
+    setMemoryCards(shuffleArray(cards));
     setFlippedCards([]);
     setMatchedCards([]);
     setActiveGame("memory");
@@ -765,7 +767,7 @@ const wordTimeoutRef = useRef<number | null>(null);
             <div className="text-center space-y-4">
               <div className="text-5xl font-bold text-foreground">{mathQuestion.num1} + {mathQuestion.num2} = ?</div>
               <div className="flex gap-4 items-center justify-center max-w-md mx-auto">
-                <input type="number" value={mathQuestion.answer || ""} onChange={(e) => setMathQuestion({ ...mathQuestion, answer: parseInt(e.target.value) || 0 })} onKeyPress={(e) => e.key === "Enter" && checkMathAnswer()} className="flex-1 px-4 py-3 text-2xl text-center border-2 border-border rounded-xl bg-background focus:outline-none focus:border-primary" placeholder="?" autoFocus />
+                <input type="number" value={mathQuestion.answer || ""} onChange={(e) => setMathQuestion({ ...mathQuestion, answer: e.target.value })} onKeyPress={(e) => e.key === "Enter" && checkMathAnswer()} className="flex-1 px-4 py-3 text-2xl text-center border-2 border-border rounded-xl bg-background focus:outline-none focus:border-primary" placeholder="?" autoFocus />
                 <Button onClick={checkMathAnswer} size="lg" className="px-8">Check</Button>
               </div>
             </div>
