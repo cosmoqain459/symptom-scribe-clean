@@ -1,5 +1,5 @@
 import { LayoutDashboard, MessageSquare, Activity, History, User, Phone, LogOut, Brain, Sparkles, Settings } from "lucide-react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink,useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -35,6 +35,12 @@ export function AppSidebar() {
   const { toast } = useToast();
   const isCollapsed = state === "collapsed";
 
+  const handleMobileNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -45,12 +51,6 @@ export function AppSidebar() {
       });
     } else {
       navigate("/auth");
-    }
-  };
-
-  const handleMobileNavClick = () => {
-    if (isMobile && setOpenMobile) {
-      setOpenMobile(false);
     }
   };
 
