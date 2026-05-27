@@ -89,6 +89,10 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  useEffect(() => {
+    setShowPassword(false);
+  }, [authTab]);
+
   const validateSignIn = () => {
     try {
       emailSchema.parse(signInEmail);
