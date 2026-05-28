@@ -234,6 +234,7 @@ const getCategoryIcon = (category: string) => {
 const HealthFacts = () => {
   const [currentFact, setCurrentFact] = useState<HealthFact | null>(null);
   const [factHistory, setFactHistory] = useState<HealthFact[]>([]);
+  const hasInitialized = useRef(false);
   const [liked, setLiked] = useState<Set<number>>(new Set());
   const [saved, setSaved] = useState<Set<number>>(new Set());
 
@@ -260,6 +261,9 @@ const HealthFacts = () => {
   };
 
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     getNextFact(true);
     showInfo("Welcome to Health Facts!", "Weird, surprising, and 100% real 🤯");
   }, []);
