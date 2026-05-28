@@ -9,7 +9,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError, showInfo, showWarning } from "@/lib/toast-helpers";
 import confetti from "canvas-confetti";
-import { shuffleArray } from "@/lib/utils";
 
 interface TrendQuestion {
   id: number;
@@ -19,6 +18,17 @@ interface TrendQuestion {
   patternDescription: string;
   correctAnswer: number;
   options: number[];
+}
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+
+  return arr;
 }
 
 const BrainGames = () => {
@@ -152,16 +162,6 @@ const BrainGames = () => {
 
   // ─── Memory Game ───────────────────────────────────────────────────────────
 
-  const startMemoryGame = () => {
-    const cards = [...Array(8)].map((_, i) => i % 4);
-    setMemoryCards(shuffleArray(cards));
-    setFlippedCards([]);
-    setMatchedCards([]);
-    setMemoryGameWon(false);
-    setActiveGame("memory");
-    showSuccess("Memory Game Started!", "Match all the pairs to win");
-  };
-
   const resetMemoryGame = () => {
     setFlippedCards([]);
     setMatchedCards([]);
@@ -173,91 +173,12 @@ const BrainGames = () => {
     showSuccess("New Game!", "Cards reshuffled — good luck!");
   };
 
-  const handleCardClick = (index: number) => {
-    if (flippedCards.length === 2 || flippedCards.includes(index) || matchedCards.includes(index)) {
-      return;
-    }
-
-    const newFlipped = [...flippedCards, index];
-    setFlippedCards(newFlipped);
-
-    if (newFlipped.length === 2) {
-      const [first, second] = newFlipped;
-      if (memoryCards[first] === memoryCards[second]) {
-        const newMatched = [...matchedCards, first, second];
-        setMatchedCards(newMatched);
-        setFlippedCards([]);
-
-        const pairsFound = newMatched.length / 2;
-        const totalPairs = memoryCards.length / 2;
-
-        if (newMatched.length === memoryCards.length) {
-          setMemoryGameWon(true);
-          showSuccess("🎉 Congratulations! 🎉", "You've matched all pairs! Great memory!");
-          toast({ title: "🎉 You Won!", description: "All pairs matched!" });
-        } else {
-          showSuccess("Match Found!", `You matched a pair! (${pairsFound}/${totalPairs})`);
-        }
-      } else {
-        setTimeout(() => {
-          showWarning("No match", "Try again!");
-        }, 500);
-        setTimeout(() => setFlippedCards([]), 1000);
-      }
-    }
-  };
 
   // ─── Math Game ─────────────────────────────────────────────────────────────
 
-  const startMathGame = () => {
-    generateMathQuestion();
-    setMathScore(0);
-    setActiveGame("math");
-    showSuccess("Math Challenge Started!", "Solve as many problems as you can");
-  };
-
-  const generateMathQuestion = () => {
-    const num1 = Math.floor(Math.random() * 50) + 10;
-    const num2 = Math.floor(Math.random() * 50) + 10;
-    setMathQuestion({ num1, num2, answer: "" });
-  };
-
-  const checkMathAnswer = () => {
-    const correct = mathQuestion.num1 + mathQuestion.num2;
-    const userAnswer = parseInt(mathQuestion.answer);
-    if (userAnswer === correct) {
-      const newScore = mathScore + 1;
-      setMathScore(newScore);
-      showSuccess("✓ Correct! ✓", `Score: ${newScore}`);
-      toast({ title: "✓ Correct!", description: `Score: ${newScore}` });
-      generateMathQuestion();
-    } else {
-      showError("✗ Incorrect", `The answer was ${correct}. Keep practicing!`);
-      toast({ title: "✗ Incorrect", description: `The answer was ${correct}`, variant: "destructive" });
-      generateMathQuestion();
-    }
-  };
 
   // ─── Word Game ─────────────────────────────────────────────────────────────
 
-  const startWordGame = () => {
-    const sequence = [];
-    for (let i = 0; i < 5; i++) {
-      sequence.push(healthWords[Math.floor(Math.random() * healthWords.length)]);
-    }
-
-    setWordSequence(sequence);
-    setUserSequence([]);
-    setWordPhase("memorize");
-    setTimeLeft(10);
-    setActiveGame("word");
-    wordTimeoutRef.current = window.setTimeout(() => {
-      setWordPhase("recall");
-      showWarning("Time's up!", "Now recall the words in order");
-    }, 10000);
-
-    showInfo("Memorize these words!", "You have 10 seconds...");
-  };
 
   useEffect(() => {
     if (wordPhase !== "memorize" || timeLeft <= 0) return;
@@ -489,6 +410,113 @@ const BrainGames = () => {
       case "sleep": return "hours";
       case "water": return "glasses";
       default: return "";
+    }
+  };
+
+  const startMemoryGame = () => {
+    const cards = [...Array(8)].map((_, i) => i % 4);
+    setMemoryCards(cards.sort(() => Math.random() - 0.5));
+    setFlippedCards([]);
+    setMatchedCards([]);
+    setActiveGame("memory");
+    showSuccess("Memory Game Started!", "Match all the pairs to win");
+  };
+
+  const startMathGame = () => {
+    generateMathQuestion();
+    setMathScore(0);
+    setActiveGame("math");
+    showSuccess("Math Challenge Started!", "Solve as many problems as you can");
+  };
+
+  const startWordGame = () => {
+    const sequence = shuffleArray([...healthWords]).slice(
+      0,
+    Math.min(5, healthWords.length)
+    );
+
+    setWordSequence(sequence);
+    setUserSequence([]);
+    setWordPhase("memorize");
+    setTimeLeft(10);
+    setActiveGame("word");
+
+    showInfo("Memorize these words!", "You have 10 seconds...");
+
+    setTimeout(() => {
+      setWordPhase("recall");
+      showWarning("Time's up!", "Now recall the words in order");
+    }, 10000);
+  };
+  
+  useEffect(() => {
+    if (wordPhase !== "memorize" || timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [wordPhase, timeLeft]);
+
+  const generateMathQuestion = () => {
+    const num1 = Math.floor(Math.random() * 50) + 10;
+    const num2 = Math.floor(Math.random() * 50) + 10;
+    setMathQuestion({ num1, num2, answer: "" });
+  };
+
+  const handleCardClick = (index: number) => {
+    if (flippedCards.length === 2 || flippedCards.includes(index) || matchedCards.includes(index)) {
+      return;
+    }
+
+    const newFlipped = [...flippedCards, index];
+    setFlippedCards(newFlipped);
+
+    if (newFlipped.length === 2) {
+      const [first, second] = newFlipped;
+      if (memoryCards[first] === memoryCards[second]) {
+        setMatchedCards([...matchedCards, first, second]);
+        setFlippedCards([]);
+        
+        showSuccess("Match Found!", `You matched a pair! (${matchedCards.length / 2 + 1}/${memoryCards.length / 2})`);
+
+        if (matchedCards.length + 2 === memoryCards.length) {
+          showSuccess("🎉 Congratulations! 🎉", "You've matched all pairs! Great memory!");
+          toast({
+            title: "🎉 Congratulations!",
+            description: "You've matched all pairs!",
+          });
+        }
+      } else {
+        setTimeout(() => {
+          showWarning("No match", "Try again!");
+        }, 500);
+        setTimeout(() => setFlippedCards([]), 1000);
+      }
+    }
+  };
+
+  const checkMathAnswer = () => {
+    const correct = mathQuestion.num1 + mathQuestion.num2;
+    const userAnswer = parseInt(mathQuestion.answer);
+    if (userAnswer === correct) {
+      const newScore = mathScore + 1;
+      setMathScore(newScore);
+      showSuccess("✓ Correct! ✓", `Score: ${newScore}`);
+      toast({
+        title: "✓ Correct!",
+        description: `Score: ${newScore}`,
+      });
+      generateMathQuestion();
+    } else {
+      showError("✗ Incorrect", `The answer was ${correct}. Keep practicing!`);
+      toast({
+        title: "✗ Incorrect",
+        description: `The answer was ${correct}`,
+        variant: "destructive",
+      });
+      generateMathQuestion();
     }
   };
 
