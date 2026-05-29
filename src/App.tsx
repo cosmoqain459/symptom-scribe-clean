@@ -19,6 +19,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import AIHealthAssistant from "./pages/AIHealthAssistant";
 
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Disclaimer from "./pages/Disclaimer";
+import Accessibility from "./pages/Accessibility";
+import HealthLibrary from "./pages/HealthLibrary";
+import Blog from "./pages/Blog";
+import Contact from "./pages/Contact";
+import ScrollToTop from "@/components/ScrollToTop";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -27,6 +35,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -130,6 +139,34 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/privacy"
+            element={
+              <Privacy />
+            }
+          />
+          <Route
+            path="/terms"
+            element={
+              <Terms />
+            }
+          />
+          <Route
+            path="/disclaimer"
+            element={
+              <Disclaimer />
+            }
+          />
+          <Route
+            path="/accessibility"
+            element={
+              <Accessibility />
+            }
+          />
+          <Route path="/health-library" element={<HealthLibrary />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -21,6 +21,7 @@ import {
   Mail
 } from "lucide-react";
 
+
 const Index = () => {
   const navigate = useNavigate();
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -521,10 +522,10 @@ const Index = () => {
           Platform
         </h4>
         <ul className="space-y-3 text-sm">
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Brain className="w-4 h-4" /> AI Symptom Checker</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Health Metrics</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Clock className="w-4 h-4" /> Consultation History</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Brain className="w-4 h-4" /> Brain Training</a></li>
+          <li><Link to="/chat" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Brain className="w-4 h-4" /> AI Symptom Checker</Link></li>
+          <li><Link to="/metrics" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Health Metrics</Link></li>
+          <li><Link to="/history" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Clock className="w-4 h-4" /> Consultation History</Link></li>
+          <li><Link to="/brain-games" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Brain className="w-4 h-4" /> Brain Training</Link></li>
         </ul>
       </div>
       
@@ -535,10 +536,24 @@ const Index = () => {
           Resources
         </h4>
         <ul className="space-y-3 text-sm">
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Heart className="w-4 h-4" /> Health Library</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Shield className="w-4 h-4" /> Emergency Guide</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><HelpCircle className="w-4 h-4" /> FAQ</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><FileText className="w-4 h-4" /> Blog</a></li>
+          <li><Link to="/health-library" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Heart className="w-4 h-4" /> Health Library</Link></li>
+          <li><Link to="/emergency" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Shield className="w-4 h-4" /> Emergency Guide</Link></li>
+          <li>
+          <button
+            onClick={() => {
+              const faq = document.getElementById("faq");
+              if (faq) {
+                faq.scrollIntoView({ behavior: "smooth" });
+              } else {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+              }
+            }}
+            className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 w-full text-left text-sm"
+          >
+            <HelpCircle className="w-4 h-4" /> FAQ
+          </button>
+        </li>
+          <li><Link to="/blog" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><FileText className="w-4 h-4" /> Blog</Link></li>
         </ul>
       </div>
       
@@ -549,10 +564,10 @@ const Index = () => {
           Legal
         </h4>
         <ul className="space-y-3 text-sm">
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Lock className="w-4 h-4" /> Privacy Policy</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><FileText className="w-4 h-4" /> Terms of Service</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Medical Disclaimer</a></li>
-          <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Mail className="w-4 h-4" /> Contact Support</a></li>
+          <li><Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Lock className="w-4 h-4" /> Privacy Policy</Link></li>
+          <li><Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><FileText className="w-4 h-4" /> Terms of Service</Link></li>
+          <li><Link to="/disclaimer" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Medical Disclaimer</Link></li>
+          <li><Link to="/contact" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><Mail className="w-4 h-4" /> Contact Support</Link></li>
         </ul>
       </div>
     </div>
@@ -564,18 +579,18 @@ const Index = () => {
           © 2026 Symptom Scribe. All rights reserved.
         </p>
         <div className="flex gap-6">
-          <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs">
+          <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors text-xs">
             Privacy
-          </a>
-          <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs">
+          </Link>
+          <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors text-xs">
             Terms
-          </a>
-          <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs">
+          </Link>
+          <Link to="/disclaimer" className="text-muted-foreground hover:text-primary transition-colors text-xs">
             Disclaimer
-          </a>
-          <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs">
+          </Link>
+          <Link to="/accessibility" className="text-muted-foreground hover:text-primary transition-colors text-xs">
             Accessibility
-          </a>
+          </Link>
         </div>
       </div>
       
