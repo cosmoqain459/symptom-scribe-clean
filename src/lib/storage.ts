@@ -118,3 +118,70 @@ export const clearSafeStorage = (): void => {
     console.warn("sessionStorage clear denied:", error);
   }
 };
+
+// ─── 9. CONSTANTS ─────────────────────────────────────────────────────────────
+const MAX_KEY_LENGTH = 100;
+const MAX_VALUE_LENGTH = 5 * 1024 * 1024; // 5MB
+
+// ─── 10. VALIDATE KEY ─────────────────────────────────────────────────────────
+const isValidKey = (key: string): boolean => {
+  if (!key || typeof key !== "string") return false;
+  if (key.trim().length === 0) return false;
+  if (key.length > MAX_KEY_LENGTH) return false;
+  return true;
+};
+
+// ─── 11. STORAGE SIZE CHECKER ─────────────────────────────────────────────────
+export const getStorageSize = (type: "localStorage" | "sessionStorage"): number => {
+  try {
+    const storage = window[type];
+    let total = 0;
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i) || "";
+      const value = storage.getItem(key) || "";
+      total += key.length + value.length;
+    }
+    return total; // in bytes
+  } catch (error) {
+    console.warn("Could not calculate storage size:", error);
+    return 0;
+  }
+};
+
+// ─── 12. STORAGE SIZE IN KB/MB ────────────────────────────────────────────────
+export const getStorageSizeFormatted = (type: "localStorage" | "sessionStorage"): string => {
+  const bytes = getStorageSize(type);
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+// ─── 13. VALIDATED SET ────────────────────────────────────────────────────────
+export const setValidatedStorage = (key: string, value: string): boolean => {
+  if (!isValidKey(key)) {
+    console.warn(`Invalid storage key: "${key}"`);
+    return false;
+  }
+  if (value.length > MAX_VALUE_LENGTH) {
+    console.warn(`Value too large for key: "${key}"`);
+    return false;
+  }
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    console.warn("Storage write denied:", error);
+    return false;
+  }
+};
+
+// ─── 14. GET ALL KEYS ─────────────────────────────────────────────────────────
+export const getAllStorageKeys = (type: "localStorage" | "sessionStorage"): string[] => {
+  try {
+    const storage = window[type];
+    return Array.from({ length: storage.length }, (_, i) => storage.key(i) || "").filter(Boolean);
+  } catch (error) {
+    console.warn("Could not retrieve storage keys:", error);
+    return [];
+  }
+};
