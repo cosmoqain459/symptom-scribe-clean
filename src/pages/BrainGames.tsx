@@ -501,8 +501,8 @@ const BrainGames = () => {
   };
 
   const startMathGame = () => {
-    generateMathQuestion();
     setMathScore(0);
+    generateMathQuestion(0);
     setActiveGame("math");
     showSuccess("Math Challenge Started!", "Solve as many problems as you can");
   };
@@ -542,17 +542,17 @@ const BrainGames = () => {
     return () => clearInterval(timer);
   }, [wordPhase, timeLeft]);
 
-  const generateMathQuestion = useCallback(() => {
+  const generateMathQuestion = useCallback((score = mathScore) => {
     const availableOperators = ["+"];
-    if (mathScore >= 3) availableOperators.push("-");
-    if (mathScore >= 6) availableOperators.push("*");
+    if (score >= 3) availableOperators.push("-");
+    if (score >= 6) availableOperators.push("*");
 
     const operator = availableOperators[Math.floor(Math.random() * availableOperators.length)];
 
     let range = 20;
-    if (mathScore >= 10) range = 150;
-    else if (mathScore >= 6) range = 100;
-    else if (mathScore >= 3) range = 50;
+    if (score >= 10) range = 150;
+    else if (score >= 6) range = 100;
+    else if (score >= 3) range = 50;
 
     let num1 = 0;
     let num2 = 0;
@@ -567,8 +567,8 @@ const BrainGames = () => {
       num2 = Math.min(n1, n2);
     } else if (operator === "*") {
       let maxFactor = 9;
-      if (mathScore >= 10) maxFactor = 15;
-      else if (mathScore >= 8) maxFactor = 12;
+      if (score >= 10) maxFactor = 15;
+      else if (score >= 8) maxFactor = 12;
       num1 = Math.floor(Math.random() * (maxFactor - 2)) + 2;
       num2 = Math.floor(Math.random() * 9) + 2;
     }
@@ -921,7 +921,7 @@ const BrainGames = () => {
                     <div className="bg-red-500 rounded-full p-1"><Zap className="w-5 h-5 text-white" /></div>
                   )}
                   <p className={`text-xl font-black ${isPatternCorrect ? "text-green-600" : "text-red-600"}`}>
-                    {isPatternCorrect ? "BRILIANT!" : "NOT QUITE!"}
+                    {isPatternCorrect ? "BRILLIANT!" : "NOT QUITE!"}
                   </p>
                 </div>
                 <p className="text-base font-semibold text-foreground">
@@ -1018,6 +1018,18 @@ const BrainGames = () => {
                     transition={{ delay: 0.1 + index * 0.1 }}
                     whileHover={{ y: -10 }}
                     className="group relative"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Play ${game.name}`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        if (game.id === "memory") startMemoryGame();
+                        else if (game.id === "math") startMathGame();
+                        else if (game.id === "word") startWordGame();
+                        else if (game.id === "pattern") startPatternGame();
+                      }
+                    }}
                     onClick={() => {
                       if (game.id === "memory") startMemoryGame();
                       else if (game.id === "math") startMathGame();
@@ -1147,6 +1159,15 @@ const BrainGames = () => {
                           key={index}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Memory card ${index + 1}`}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleCardClick(index);
+                            }
+                          }}
                           onClick={() => handleCardClick(index)}
                           className={`aspect-square rounded-3xl flex items-center justify-center text-5xl cursor-pointer transition-all duration-500 shadow-md ${
                             flippedCards.includes(index) || matchedCards.includes(index)
@@ -1185,7 +1206,7 @@ const BrainGames = () => {
                       </div>
                       <Button variant="outline" size="icon" onClick={() => {
                         setMathScore(0);
-                        generateMathQuestion();
+                        generateMathQuestion(0);
                         showSuccess("Game Reset!", "Score cleared — start fresh!");
                       }} className="w-12 h-12 rounded-2xl border-2">
                         <RefreshCw className="w-5 h-5" />
@@ -1225,7 +1246,7 @@ const BrainGames = () => {
                         type="number"
                         value={mathQuestion.answer ?? ""}
                         onChange={(e) => setMathQuestion({ ...mathQuestion, answer: e.target.value })}
-                        onKeyPress={(e) => e.key === "Enter" && checkMathAnswer()}
+                        onKeyDown={(e) => e.key === "Enter" && checkMathAnswer()}
                         className="flex-1 w-full px-8 h-20 text-4xl font-black text-center border-4 border-border/50 rounded-[2rem] bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-inner"
                         placeholder="?"
                         autoFocus
@@ -1357,6 +1378,10 @@ const BrainGames = () => {
                               key={`${item.word}-${idx}`}
                               draggable
                               onDragStart={() => setDragIndex(idx)}
+                              onDragEnd={() => {
+                                setDragIndex(null);
+                                setDragOverIndex(null);
+                              }}
                               onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
                               onDrop={(e) => {
                                 e.preventDefault();
