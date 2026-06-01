@@ -202,6 +202,8 @@ const ChatInterface = () => {
           <ChatMessage key={index} role={message.role} content={message.content} />
         ))}
         {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+  <ChatLoading />
+)}
           <div className="flex gap-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center animate-pulse">
               <Loader2 className="w-5 h-5 text-primary-foreground animate-spin" />
