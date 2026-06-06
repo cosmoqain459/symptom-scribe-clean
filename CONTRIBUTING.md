@@ -22,8 +22,10 @@ Follow these steps to set up the project locally on your system:
 
 ### Prerequisites
 Make sure you have the following installed:
-* [Node.js](https://nodejs.org/) (v18 or higher recommended)
+* [Node.js](https://nodejs.org/) (v20 recommended — see `.nvmrc`; v18+ is supported in CI)
 * [Git](https://git-scm.com/)
+* A [Supabase](https://supabase.com/) project with credentials for local development
+* (Optional) [Supabase CLI](https://supabase.com/docs/guides/cli) — required only if you are developing or testing edge functions locally
 
 ### Step 1: Fork and Clone the Repository
 1. Click the **Fork** button at the top right of the [Symptom Scribe Repository](https://github.com/mohdmaazgani/symptom-scribe-clean) to create a copy of the repository under your GitHub account.
@@ -42,18 +44,32 @@ To keep your local repository in sync with the upstream repository, add a remote
 git remote add upstream https://github.com/mohdmaazgani/symptom-scribe-clean.git
 ```
 
-### Step 3: Install Dependencies
+### Step 3: Configure Environment Variables
+Copy the example env file and add your Supabase browser credentials (Dashboard → Project Settings → API):
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` and set these **browser-only** variables:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Do **not** add `SUPABASE_SERVICE_ROLE_KEY` or other edge-function secrets to `.env.local`. Configure those via the Supabase dashboard or CLI (see [README.md](./README.md) or [FAQ.md](./FAQ.md)).
+
+### Step 4: Install Dependencies
 Install all the required npm packages:
 ```bash
 npm install
 ```
 
-### Step 4: Run the Development Server
+### Step 5: Run the Development Server
 Start the local server to test the app in your browser:
 ```bash
 npm run dev
 ```
-Open your browser and navigate to `http://localhost:5173` (or the port shown in your terminal).
+Open your browser and navigate to `http://localhost:8080` (configured in `vite.config.ts`; use the port shown in your terminal if it differs).
 
 ---
 

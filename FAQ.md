@@ -57,21 +57,15 @@ git clone https://github.com/mohdmaazgani/symptom-scribe-clean.git
 cd symptom-scribe-clean
 ```
 
-**2. Install dependencies**
+**2. Set up environment variables**
 
-```bash
-npm install
-```
-
-**3. Set up environment variables**
-
-Copy the example env file and fill in your Supabase credentials:
+Copy the example env file and fill in your Supabase credentials (Dashboard → Project Settings → API):
 
 ```bash
 cp .env.example .env.local
 ```
 
-Add the following variables:
+Add only the following **browser** variables to `.env.local`:
 
 ```
 VITE_SUPABASE_URL=your_supabase_url
@@ -80,11 +74,11 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 
 If you are still migrating older local setups, `VITE_SUPABASE_ANON_KEY` is accepted as a fallback, but it should be replaced with the publishable key.
 
-### What environment variables do the Supabase edge functions need?
+**3. Install dependencies**
 
-The browser app only needs VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, with VITE_SUPABASE_ANON_KEY kept as a legacy fallback. The edge functions use a separate runtime secret set: LOVABLE_API_KEY is required for the symptom-analyzer function, UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are optional for distributed rate limiting, and delete-user-account needs SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY.
-
-Browser-loaded variables belong in .env.local, while Supabase runtime secrets should be configured in the Supabase dashboard or with the Supabase CLI before running or deploying edge functions. Never expose SUPABASE_SERVICE_ROLE_KEY to the browser.
+```bash
+npm install
+```
 
 **4. Start the development server**
 
@@ -98,18 +92,43 @@ npm run dev
 http://localhost:8080
 ```
 
+### What environment variables do the Supabase edge functions need?
+
+The browser app only needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, with `VITE_SUPABASE_ANON_KEY` kept as a legacy fallback. The edge functions use a separate runtime secret set: `LOVABLE_API_KEY` is required for the symptom-analyzer function, `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are optional for distributed rate limiting, and `delete-user-account` needs `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
+
+Browser-loaded variables belong in `.env.local`, while Supabase runtime secrets should be configured in the Supabase dashboard or with the Supabase CLI — **never** place `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`.
+
+**Configure edge function secrets with the Supabase CLI:**
+
+```bash
+supabase login
+supabase link --project-ref <your-project-ref>
+supabase secrets set LOVABLE_API_KEY=<your-key>
+supabase secrets set SUPABASE_URL=<your-url> SUPABASE_ANON_KEY=<your-anon-key> SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+# Optional rate limiting:
+supabase secrets set UPSTASH_REDIS_REST_URL=<url> UPSTASH_REDIS_REST_TOKEN=<token>
+```
+
+**Serve edge functions locally (optional):**
+
+```bash
+supabase functions serve --env-file supabase/.env.local
+```
+
 ### What Node.js version is recommended?
 
-It is recommended to use **Node.js v18 or above** for the best compatibility.
+Use **Node.js 20** (see `.nvmrc`). Node 18+ is supported in CI; Node 20 is recommended for local development.
 
 ### Can I use `bun` instead of `npm`?
 
-Yes! The project includes a `bun.lockb` file, so you can also use:
+The repo includes a `bun.lockb`, but **npm is the canonical package manager** (used in CI and contribution docs). For the most reliable setup, use:
 
 ```bash
-bun install
-bun dev
+npm install
+npm run dev
 ```
+
+Bun may work for local development (`bun install` / `bun dev`), but PR validation runs with `npm ci`.
 
 ---
 
@@ -218,10 +237,16 @@ npm install
 
 ### Edge function fails with missing secret errors
 
-- Verify that LOVABLE_API_KEY is configured for the symptom-analyzer edge function
-- Add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN only if you want Upstash-backed distributed rate limiting; they are optional
-- Confirm that SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY are set for delete-user-account
-- Re-run the Supabase secret setup locally or in the dashboard, then redeploy the function if needed
+- Verify that `LOVABLE_API_KEY` is configured for the symptom-analyzer edge function
+- Add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` only if you want Upstash-backed distributed rate limiting; they are optional
+- Confirm that `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are set for delete-user-account
+- Re-run secret setup with the Supabase CLI, then redeploy or re-serve the function:
+
+  ```bash
+  supabase secrets set LOVABLE_API_KEY=<your-key>
+  supabase secrets set SUPABASE_URL=<your-url> SUPABASE_ANON_KEY=<your-anon-key> SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+  supabase functions serve --env-file supabase/.env.local
+  ```
 
 ### TypeScript errors after pulling latest changes
 
