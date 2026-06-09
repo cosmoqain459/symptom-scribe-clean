@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
   Phone, AlertTriangle, MapPin, ExternalLink,
@@ -7,9 +8,10 @@ import {
   ChevronDown, ChevronUp, CheckCircle2, Copy, Share2,
   ShieldAlert, Flame, Activity, PhoneCall, Volume2, VolumeX,
   Hospital, Pill, Stethoscope, Bell, BookOpen,
-  Navigation
+  Navigation, Loader2
 } from "lucide-react";
-import { showSuccess, showInfo } from "@/lib/toast-helpers";
+import { showSuccess, showInfo, showError, showWarning } from "@/lib/toast-helpers";
+import { supabase } from "@/integrations/supabase/client";
 
 // ─── Mobile Detection ────────────────────────────────────────────────────────
 const isMobile = () =>
@@ -191,6 +193,7 @@ const EmergencyClock = () => {
 };
 
 const Emergency = () => {
+  const navigate = useNavigate();
   const [expandedGuide, setExpandedGuide]         = useState<string | null>(null);
   // tracks which LIFE THREATENING guides have confirmed the call step
   const [calledFor, setCalledFor]                 = useState<string[]>([]);
@@ -202,6 +205,119 @@ const Emergency = () => {
   const [checkedReminders, setCheckedReminders]   = useState<number[]>([]);
   const [hospitalLoading, setHospitalLoading]     = useState<string | null>(null);
   const [detectedCountry, setDetectedCountry]     = useState<string | null>(null);
+
+  // Emergency Contact & Broadcast states
+  const [profile, setProfile] = useState<{
+    emergency_contact_name: string | null;
+    emergency_contact_phone: string | null;
+    full_name: string | null;
+  } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [alertStatus, setAlertStatus] = useState<"idle" | "locating" | "sending" | "success" | "error">("idle");
+  const [alertProgressMessage, setAlertProgressMessage] = useState("");
+
+  // Fetch emergency contact profile info
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setProfileLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("full_name, emergency_contact_name, emergency_contact_phone")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error loading emergency profile info:", error);
+        } else if (data) {
+          setProfile(data);
+        }
+      } catch (err) {
+        console.error("Error loading profile:", err);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const sendBroadcast = async (lat: number | null, lon: number | null) => {
+    setAlertStatus("sending");
+    try {
+      const { data, error } = await supabase.functions.invoke("broadcast-emergency", {
+        body: {
+          latitude: lat ?? undefined,
+          longitude: lon ?? undefined,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setAlertStatus("success");
+      showSuccess(
+        "Alert Sent!",
+        `Emergency alert successfully broadcast to ${profile?.emergency_contact_name || "your contact"}.`
+      );
+      setTimeout(() => setAlertStatus("idle"), 5000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred while sending SMS.";
+      console.error("Failed to send broadcast:", err);
+      setAlertStatus("error");
+      showError(
+        "Broadcast Failed",
+        errorMessage
+      );
+      setTimeout(() => setAlertStatus("idle"), 5000);
+    }
+  };
+
+  const handleAlertContacts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showWarning("Authentication Required", "Please sign in to alert emergency contacts");
+      return;
+    }
+
+    if (!profile || !profile.emergency_contact_phone) {
+      showWarning(
+        "No Contact Saved",
+        "Please configure an emergency contact in your Health Profile page first."
+      );
+      return;
+    }
+
+    playBeep();
+    setAlertStatus("locating");
+    setAlertProgressMessage("Acquiring real-time location...");
+
+    if (!navigator.geolocation) {
+      setAlertProgressMessage("Location service not supported. Requesting broadcast anyway...");
+      sendBroadcast(null, null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setAlertProgressMessage("Location acquired. Sending broadcast...");
+        sendBroadcast(latitude, longitude);
+      },
+      (error) => {
+        console.error("Geolocation failed:", error);
+        setAlertProgressMessage("Unable to get location. Sending broadcast without coordinates...");
+        sendBroadcast(null, null);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
   useEffect(() => {
     // Attempt keyless geolocation lookup using ipapi.co
@@ -261,7 +377,9 @@ const Emergency = () => {
       gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
       oscillator.start(ctx.currentTime);
       oscillator.stop(ctx.currentTime + 0.4);
-    } catch (_) {}
+    } catch (err) {
+      console.error("Audio beep failed:", err);
+    }
   };
 
   // ── Filtered numbers ───────────────────────────────────────────────────────
@@ -374,6 +492,103 @@ const Emergency = () => {
           — tap to dial 112 / 911 / 999
         </span>
       </a>
+
+      {/* ── Broadcast Geolocation / Twilio SMS alerts ────────────────────── */}
+      <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <Bell className="w-5 h-5 text-destructive animate-bounce" />
+              Broadcast Emergency Alert
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Send an instant SMS with your real-time GPS coordinates and a Google Maps link to your trusted contact.
+            </p>
+          </div>
+        </div>
+
+        {profileLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+            <Loader2 className="w-4 h-4 animate-spin text-destructive" />
+            Checking emergency contacts...
+          </div>
+        ) : !profile || !profile.emergency_contact_phone ? (
+          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">No Emergency Contact Configured</p>
+                <p className="text-xs opacity-90">Please set up a contact name and phone number in your profile first.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/profile")}
+              className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors shrink-0 self-end sm:self-auto"
+            >
+              Configure Contact
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                disabled={alertStatus !== "idle"}
+                onClick={handleAlertContacts}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-lg text-white font-bold text-sm transition-all duration-200 active:scale-95 shadow-sm
+                  ${alertStatus === "idle" ? "bg-destructive hover:bg-destructive/90" : ""}
+                  ${alertStatus === "locating" ? "bg-orange-500 animate-pulse" : ""}
+                  ${alertStatus === "sending" ? "bg-blue-600" : ""}
+                  ${alertStatus === "success" ? "bg-green-600 cursor-default" : ""}
+                  ${alertStatus === "error" ? "bg-destructive/80" : ""}
+                `}
+              >
+                {alertStatus === "idle" && (
+                  <>
+                    <Navigation className="w-4 h-4 animate-pulse" />
+                    ALERT TRUSTED CONTACTS
+                  </>
+                )}
+                {alertStatus === "locating" && (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    ACQUIRING GPS LOCATION...
+                  </>
+                )}
+                {alertStatus === "sending" && (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    SENDING SMS BROADCAST...
+                  </>
+                )}
+                {alertStatus === "success" && (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    EMERGENCY ALERT BROADCASTED
+                  </>
+                )}
+                {alertStatus === "error" && (
+                  <>
+                    <AlertTriangle className="w-4 h-4" />
+                    BROADCAST FAILED
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Status / Contact detail message */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground flex-wrap gap-2 pt-1">
+              <div>
+                Recipient: <span className="font-semibold text-foreground">{profile.emergency_contact_name || "Emergency Contact"}</span> ({profile.emergency_contact_phone})
+              </div>
+              {alertStatus !== "idle" && alertProgressMessage && (
+                <div className="text-destructive font-semibold animate-pulse">
+                  {alertProgressMessage}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Pulsing Alert Strip ───────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-xl border border-destructive/40 bg-destructive/5 dark:bg-destructive/10 px-4 py-3">
