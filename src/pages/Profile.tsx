@@ -40,8 +40,8 @@ const Profile = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        .eq("user_id" as any, user.id)
+        .maybeSingle() as any;
 
       if (error && error.code !== "PGRST116") {
         showError("Error Loading Profile", error.message);
@@ -162,7 +162,7 @@ if (!profile.blood_type) {
       // Upsert the profile data targeting the unique user_id constraint
       const result = await supabase
         .from("profiles")
-        .upsert(profileData, { onConflict: "user_id" });
+        .upsert(profileData as any, { onConflict: "user_id" });
 
       if (result.error) {
         console.error("Supabase error:", result.error);

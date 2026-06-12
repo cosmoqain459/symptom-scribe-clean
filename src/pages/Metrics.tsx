@@ -245,7 +245,7 @@ const Metrics = () => {
           value: metricValue,
           notes: notes || null,
           recorded_at: recordedAt,
-        });
+        } as any);
 
         if (error) throw error;
 

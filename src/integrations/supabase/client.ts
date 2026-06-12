@@ -16,11 +16,11 @@ if (missingVars.length > 0) {
   );
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabasePublishableKey, {
+export const supabase = createClient<any>(supabaseUrl, supabasePublishableKey, {
   auth: {
     storage: localStorage,
-    persistence: 'session',
+    persistSession: true,
     autoRefreshToken: true,
   },
-});
+}) as any;
   
