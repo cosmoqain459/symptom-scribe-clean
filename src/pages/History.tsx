@@ -275,6 +275,23 @@ const History = () => {
         </select>
       </div>
 
+      {isFiltering && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { 
+              setSearchQuery(""); 
+              setSeverityFilter("all"); 
+            }}
+            className="gap-2"
+          >
+            <X className="h-4 w-4" />
+            Clear All Filters
+          </Button>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-center text-muted-foreground">Loading history...</p>
       ) : history.length === 0 ? (
