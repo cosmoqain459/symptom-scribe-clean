@@ -13,7 +13,6 @@ const suggestions = [
   { emoji: "😵‍💫", label: "Feeling tired and dizzy" },
 ];
 
-// ── SpeechRecognition types (not in all TS lib versions) ──────────────────
 interface ISpeechRecognitionEvent extends Event {
   readonly resultIndex: number;
   readonly results: SpeechRecognitionResultList;
@@ -45,10 +44,11 @@ declare global {
     webkitSpeechRecognition?: ISpeechRecognitionConstructor;
   }
 }
-// ──────────────────────────────────────────────────────────────────────────
 
 const AIHealthAssistant = () => {
   const [symptoms, setSymptoms] = useState("");
+  const [charCount, setCharCount] = useState(0);
+  const MAX_CHARS = 500;
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; text: string; time: string }[]
   >([]);
@@ -63,7 +63,6 @@ const AIHealthAssistant = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Cleanup recognition on unmount
   useEffect(() => {
     return () => {
       recognitionRef.current?.abort();
@@ -83,7 +82,6 @@ const AIHealthAssistant = () => {
       return;
     }
 
-    // If already listening, stop
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
@@ -104,6 +102,7 @@ const AIHealthAssistant = () => {
         transcript += event.results[i][0].transcript;
       }
       setSymptoms(transcript);
+      setCharCount(transcript.length);
     };
 
     recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
@@ -120,12 +119,12 @@ const AIHealthAssistant = () => {
     recognition.start();
   };
 
-  // ─── handleAnalyze — UNTOUCHED ────────────────────────────────────────────
   const handleAnalyze = async (text?: string) => {
     const userMessage = (text ?? symptoms).trim();
     if (!userMessage || loading) return;
 
     setSymptoms("");
+    setCharCount(0);
     const time = getTime();
     setMessages((prev) => [...prev, { role: "user", text: userMessage, time }]);
     setLoading(true);
@@ -282,7 +281,6 @@ const AIHealthAssistant = () => {
       setLoading(false);
     }
   };
-  // ─────────────────────────────────────────────────────────────────────────
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -295,7 +293,6 @@ const AIHealthAssistant = () => {
 
   return (
     <div className="flex flex-col h-full bg-background text-foreground overflow-hidden">
-      {/* Header */}
       <div className="flex-shrink-0 px-5 py-3 border-b border-border flex items-center justify-end gap-3">
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -303,7 +300,6 @@ const AIHealthAssistant = () => {
         </div>
       </div>
 
-      {/* Chat area */}
       <div className="flex-1 overflow-y-auto">
         {!hasMessages ? (
           <div className="flex flex-col items-center justify-center h-full px-6 pb-4 gap-6 text-center">
@@ -419,11 +415,9 @@ const AIHealthAssistant = () => {
         )}
       </div>
 
-      {/* Input — pinned at bottom */}
       <div className="flex-shrink-0 border-t border-border px-4 py-3 bg-background">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-2 bg-muted border border-border rounded-2xl px-4 py-2.5 focus-within:border-teal-500/50 focus-within:ring-1 focus-within:ring-teal-500/20 transition-all min-h-[48px]">
-            {/* Voice button */}
             <button
               onClick={handleVoiceInput}
               disabled={loading}
@@ -449,7 +443,13 @@ const AIHealthAssistant = () => {
             <textarea
               ref={textareaRef}
               value={symptoms}
-              onChange={(e) => setSymptoms(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= MAX_CHARS) {
+                  setSymptoms(value);
+                  setCharCount(value.length);
+                }
+              }}
               onKeyDown={handleKeyDown}
               placeholder={isListening ? "Listening…" : "Describe your symptoms in detail…"}
               rows={1}
@@ -458,7 +458,7 @@ const AIHealthAssistant = () => {
 
             <button
               onClick={() => handleAnalyze()}
-              disabled={loading || !symptoms.trim()}
+              disabled={loading || !symptoms.trim() || charCount >= MAX_CHARS}
               className="w-8 h-8 rounded-xl bg-teal-500 hover:bg-teal-400 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-all flex-shrink-0 hover:scale-105 active:scale-95"
               aria-label="Send"
             >
@@ -473,11 +473,16 @@ const AIHealthAssistant = () => {
             </button>
           </div>
 
-          <p className="text-center text-xs text-muted-foreground mt-1.5">
-            {isListening
-              ? "🔴 Listening… click the mic to stop"
-              : "AI-generated guidance — always consult a doctor for medical advice"}
-          </p>
+          <div className="flex justify-between items-center mt-1.5">
+            <span className={`text-xs ${charCount > 400 ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+              {charCount}/{MAX_CHARS}
+            </span>
+            <p className="text-center text-xs text-muted-foreground">
+              {isListening
+                ? "🔴 Listening… click the mic to stop"
+                : "AI-generated guidance — always consult a doctor for medical advice"}
+            </p>
+          </div>
         </div>
       </div>
     </div>
