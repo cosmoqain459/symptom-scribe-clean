@@ -5,7 +5,7 @@ import "./index.css";
 
 import ErrorBoundary from "./components/common/ErrorBoundary.tsx";
 
-import { ThemeProvider } from "./components/theme-provider";
+import { ThemeProvider } from "./components/theme/providers/theme-provider.tsx";
 
 
 const root = createRoot(document.getElementById("root")!);
