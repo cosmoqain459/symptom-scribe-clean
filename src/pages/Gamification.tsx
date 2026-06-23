@@ -1,113 +1,183 @@
-// src/pages/Gamification.tsx
-import { useChallenges, useUserChallenges, useUserBadges } from "@/hooks/useGamification";
-import { ChallengeCard } from "@/components/gamification/ChallengeCard";
-import { BadgeDisplay } from "@/components/gamification/BadgeDisplay";
-import { MoodLogger, MoodCalendarView } from "@/components/gamification/MoodCalendarView";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Flame, Smile, Award } from "lucide-react";
+import { useState } from "react";
+import { Trophy, Flame, Award, Smile } from "lucide-react";
+import ChallengeCard from "@/components/gamification/ChallengeCard";
+import BadgeDisplay from "@/components/gamification/BadgeDisplay";
+import MoodCalendarView from "@/components/gamification/MoodCalendarView";
+import {
+  useChallenges,
+  useUserChallenges,
+  useJoinChallenge,
+  useCheckInChallenge,
+  useUserBadges,
+  useMoodLogs,
+  useLogMood,
+} from "@/hooks/useGamification";
+
+type Tab = "challenges" | "mood" | "badges";
 
 export default function GamificationPage() {
-  const { data: challenges } = useChallenges();
-  const { data: userChallenges } = useUserChallenges();
-  const { data: userBadges } = useUserBadges();
+  const [activeTab, setActiveTab] = useState<Tab>("challenges");
 
-  // Map challenge_id → userChallenge for quick lookup
-  const userChallengeMap = new Map(
-    userChallenges?.map((uc) => [uc.challenge_id, uc]) ?? []
-  );
+  const { data: challenges = [], isLoading: loadingChallenges } = useChallenges();
+  const { data: userChallenges = [] } = useUserChallenges();
+  const { data: userBadges = [] } = useUserBadges();
+  const { data: moodLogs = [] } = useMoodLogs();
 
-  const activeChallenges = userChallenges?.filter((uc) => !uc.completed) ?? [];
+  const joinChallenge = useJoinChallenge();
+  const checkIn = useCheckInChallenge();
+  const logMood = useLogMood();
+
+  const activeCount = userChallenges.filter((c) => c.status === "active").length;
+  const bestStreak = userChallenges.reduce((max, c) => Math.max(max, c.best_streak ?? 0), 0);
+
+  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "challenges", label: "Challenges", icon: <Flame className="w-4 h-4" /> },
+    { id: "mood", label: "Mood Tracker", icon: <Smile className="w-4 h-4" /> },
+    { id: "badges", label: "My Badges", icon: <Award className="w-4 h-4" /> },
+  ];
 
   return (
     <div className="h-full overflow-y-auto">
-    <div className="container max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Trophy className="w-6 h-6 text-yellow-500" />
-          Challenges & Rewards
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Build healthy habits, earn badges, and track your mood
-        </p>
-      </div>
+      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
 
-      {/* Stats Bar */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="rounded-2xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200/50 p-4 text-center">
-          <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-orange-600">{activeChallenges.length}</p>
-          <p className="text-xs text-muted-foreground">Active Challenges</p>
-        </div>
-        <div className="rounded-2xl bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200/50 p-4 text-center">
-          <Award className="w-6 h-6 text-yellow-500 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-yellow-600">{userBadges?.length ?? 0}</p>
-          <p className="text-xs text-muted-foreground">Badges Earned</p>
-        </div>
-        <div className="rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200/50 p-4 text-center">
-          <Smile className="w-6 h-6 text-green-500 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-green-600">
-            {Math.max(...(activeChallenges.map((c) => c.current_streak) ?? [0]), 0)}
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3 text-foreground">
+            <Trophy className="w-8 h-8 text-yellow-500" />
+            Challenges & Rewards
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Build healthy habits, earn badges, and track your mood
           </p>
-          <p className="text-xs text-muted-foreground">Best Streak</p>
+        </div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-4">
+          <StatCard
+            icon={<Flame className="w-6 h-6 text-orange-400" />}
+            value={activeCount}
+            label="Active Challenges"
+            bg="bg-orange-500/10 border-orange-500/20"
+            valueColor="text-orange-400"
+          />
+          <StatCard
+            icon={<Award className="w-6 h-6 text-yellow-400" />}
+            value={userBadges.length}
+            label="Badges Earned"
+            bg="bg-yellow-500/10 border-yellow-500/20"
+            valueColor="text-yellow-400"
+          />
+          <StatCard
+            icon={<Smile className="w-6 h-6 text-emerald-400" />}
+            value={bestStreak}
+            label="Best Streak"
+            bg="bg-emerald-500/10 border-emerald-500/20"
+            valueColor="text-emerald-400"
+          />
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 bg-muted/40 p-1 rounded-xl w-fit">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div>
+          {activeTab === "challenges" && (
+            <div className="space-y-4">
+              {loadingChallenges ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-48 rounded-xl bg-muted/30 animate-pulse" />
+                  ))}
+                </div>
+              ) : challenges.length === 0 ? (
+                <EmptyState
+                  icon="🏆"
+                  title="No challenges available yet"
+                  description="Challenges will appear here once your database is set up. Check back soon!"
+                />
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {challenges.map((challenge) => {
+                    const userChallenge = userChallenges.find(
+                      (uc) => uc.challenge_id === challenge.id
+                    );
+                    return (
+                      <ChallengeCard
+                        key={challenge.id}
+                        challenge={challenge}
+                        userChallenge={userChallenge}
+                        onJoin={() => joinChallenge.mutate(challenge.id)}
+                        onCheckIn={() =>
+                          userChallenge && checkIn.mutate(userChallenge.id)
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "mood" && (
+            <MoodCalendarView moodLogs={moodLogs} onLogMood={logMood.mutate} />
+          )}
+
+          {activeTab === "badges" && (
+            <BadgeDisplay userBadges={userBadges} />
+          )}
         </div>
       </div>
-
-      {/* Tabs */}
-      <Tabs defaultValue="challenges">
-        <TabsList className="mb-6 w-full sm:w-auto">
-          <TabsTrigger value="challenges" className="flex items-center gap-1.5">
-            <Flame className="w-4 h-4" /> Challenges
-          </TabsTrigger>
-          <TabsTrigger value="mood" className="flex items-center gap-1.5">
-            <Smile className="w-4 h-4" /> Mood Tracker
-          </TabsTrigger>
-          <TabsTrigger value="badges" className="flex items-center gap-1.5">
-            <Award className="w-4 h-4" /> My Badges
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Challenges Tab */}
-        <TabsContent value="challenges">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {challenges?.map((challenge) => (
-              <ChallengeCard
-                key={challenge.id}
-                challenge={challenge}
-                userChallenge={userChallengeMap.get(challenge.id)}
-              />
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Mood Tracker Tab */}
-        <TabsContent value="mood">
-          <div className="space-y-6">
-            <MoodLogger />
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <h3 className="font-semibold text-card-foreground mb-1">
-                Mood Calendar — Last 30 Days
-              </h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                See how your mood has changed over the past month
-              </p>
-              <MoodCalendarView />
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Badges Tab */}
-        <TabsContent value="badges">
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h3 className="font-semibold text-card-foreground mb-1">My Badges</h3>
-            <p className="text-xs text-muted-foreground mb-4">
-              Achievements earned through your health journey
-            </p>
-            <BadgeDisplay />
-          </div>
-        </TabsContent>
-      </Tabs>
     </div>
+  );
+}
+
+/* ── Small reusable components ── */
+
+function StatCard({
+  icon, value, label, bg, valueColor,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+  bg: string;
+  valueColor: string;
+}) {
+  return (
+    <div className={`rounded-xl border p-5 flex flex-col items-center gap-2 ${bg}`}>
+      {icon}
+      <span className={`text-3xl font-bold ${valueColor}`}>{value}</span>
+      <span className="text-xs text-muted-foreground text-center">{label}</span>
+    </div>
+  );
+}
+
+function EmptyState({
+  icon, title, description,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-dashed border-border bg-muted/10">
+      <span className="text-5xl mb-4">{icon}</span>
+      <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-xs">{description}</p>
     </div>
   );
 }

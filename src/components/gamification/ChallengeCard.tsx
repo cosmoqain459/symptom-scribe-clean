@@ -1,109 +1,118 @@
-// src/components/gamification/ChallengeCard.tsx
-import { Challenge, UserChallenge, useJoinChallenge, useCheckInChallenge } from "@/hooks/useGamification";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Flame, CheckCircle2, Plus } from "lucide-react";
+import { CheckCircle2, Clock, Zap } from "lucide-react";
+
+interface Challenge {
+  id: string;
+  title: string;
+  description?: string;
+  duration_days: number;
+  target_value: number;
+  unit: string;
+  icon?: string;
+  color?: string;
+}
+
+interface UserChallenge {
+  id: string;
+  status: string;
+  streak_count: number;
+  best_streak: number;
+  last_checked_in?: string;
+}
 
 interface Props {
   challenge: Challenge;
   userChallenge?: UserChallenge;
+  onJoin: () => void;
+  onCheckIn: () => void;
 }
 
-const categoryColors: Record<string, string> = {
-  hydration: "bg-blue-100 text-blue-700",
-  mindfulness: "bg-purple-100 text-purple-700",
-  fitness: "bg-green-100 text-green-700",
-  sleep: "bg-indigo-100 text-indigo-700",
-  nutrition: "bg-orange-100 text-orange-700",
-};
-
-export function ChallengeCard({ challenge, userChallenge }: Props) {
-  const joinMutation = useJoinChallenge();
-  const checkInMutation = useCheckInChallenge();
-
+export default function ChallengeCard({ challenge, userChallenge, onJoin, onCheckIn }: Props) {
   const isJoined = !!userChallenge;
-  const streak = userChallenge?.current_streak ?? 0;
+  const isCompleted = userChallenge?.status === "completed";
+  const streak = userChallenge?.streak_count ?? 0;
   const progress = Math.min((streak / challenge.duration_days) * 100, 100);
-  const isCompleted = userChallenge?.completed;
 
-  // Check if already checked in today
-  const lastCheckIn = userChallenge?.last_check_in;
-  const checkedInToday =
-    lastCheckIn &&
-    new Date(lastCheckIn).toDateString() === new Date().toDateString();
+  const today = new Date().toISOString().split("T")[0];
+  const checkedInToday = userChallenge?.last_checked_in === today;
+
+  const accentColor = challenge.color ?? "#5DCAA5";
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      className="relative rounded-xl border border-border bg-card p-5 flex flex-col gap-4 transition-all hover:shadow-md hover:-translate-y-0.5"
+      style={{ borderLeftColor: accentColor, borderLeftWidth: 3 }}
+    >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">{challenge.icon}</span>
+          <span className="text-2xl">{challenge.icon ?? "🏆"}</span>
           <div>
-            <h3 className="font-semibold text-card-foreground text-sm leading-tight">
+            <h3 className="font-semibold text-foreground text-sm leading-tight">
               {challenge.title}
             </h3>
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block ${
-                categoryColors[challenge.category] ?? "bg-muted text-muted-foreground"
-              }`}
-            >
-              {challenge.category}
-            </span>
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+              {challenge.description}
+            </p>
           </div>
         </div>
         {isCompleted && (
-          <CheckCircle2 className="text-green-500 w-5 h-5 shrink-0" />
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
         )}
       </div>
 
-      <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-        {challenge.description}
-      </p>
+      {/* Meta */}
+      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          {challenge.duration_days} days
+        </span>
+        <span className="flex items-center gap-1">
+          <Zap className="w-3 h-3" />
+          {challenge.target_value} {challenge.unit}/day
+        </span>
+      </div>
 
       {/* Progress */}
       {isJoined && (
-        <div className="mb-4">
-          <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span className="flex items-center gap-1">
-              <Flame className="w-3 h-3 text-orange-500" />
-              Day {streak} / {challenge.duration_days}
-            </span>
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Day {streak} of {challenge.duration_days}</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${progress}%`, backgroundColor: accentColor }}
+            />
+          </div>
         </div>
       )}
 
-      {/* Action */}
+      {/* Action Button */}
       {!isJoined ? (
-        <Button
-          size="sm"
-          className="w-full"
-          onClick={() => joinMutation.mutate(challenge.id)}
-          disabled={joinMutation.isPending}
+        <button
+          onClick={onJoin}
+          className="w-full py-2 px-4 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: accentColor }}
         >
-          <Plus className="w-4 h-4 mr-1" />
           Join Challenge
-        </Button>
+        </button>
       ) : isCompleted ? (
-        <Button size="sm" className="w-full" disabled variant="outline">
+        <div className="w-full py-2 px-4 rounded-lg text-sm font-medium text-center text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
           ✅ Completed!
-        </Button>
+        </div>
       ) : checkedInToday ? (
-        <Button size="sm" className="w-full" disabled variant="outline">
-          ✔ Checked in today
-        </Button>
+        <div className="w-full py-2 px-4 rounded-lg text-sm font-medium text-center text-muted-foreground bg-muted/40 border border-border">
+          ✓ Checked in today
+        </div>
       ) : (
-        <Button
-          size="sm"
-          className="w-full"
-          onClick={() => checkInMutation.mutate(userChallenge!.id)}
-          disabled={checkInMutation.isPending}
+        <button
+          onClick={onCheckIn}
+          className="w-full py-2 px-4 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: accentColor }}
         >
-          <Flame className="w-4 h-4 mr-1" />
-          Check In Today
-        </Button>
+          Check In Today 🔥
+        </button>
       )}
     </div>
   );
