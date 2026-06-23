@@ -261,19 +261,62 @@ Open:
 http://localhost:8080
 
 symptom-scribe-clean/
-├── public/              # Static files
+├── public/                           # Static assets
 ├── src/
-│   ├── components/      # UI and reusable components
-│   ├── pages/           # App pages (Dashboard, Metrics, Chat, etc.)
-│   ├── integrations/    # Supabase & other service integrations
-│   ├── hooks/           # Custom React hooks
-│   └── main.tsx         # App entry point
+│   ├── components/                   # Reusable and feature-based UI components
+│   │   ├── auth/                     # Authentication-related components
+│   │   ├── chat/                     # Chat interface components
+│   │   ├── common/                   # Shared components across features
+│   │   ├── diagnostics/              # Startup and diagnostic utilities
+│   │   ├── hero/                     # Landing page hero section
+│   │   ├── layout/                   # Layout and wrapper components
+│   │   ├── legal/                    # Legal page components
+│   │   ├── navigation/               # Navigation utilities
+│   │   ├── registration/             # Registration workflow components
+│   │   ├── theme/                    # Theme providers and styling
+│   │   └── ui/                       # Generic UI elements
+│   │
+│   ├── pages/                        # Route-level application pages
+│   │   ├── Auth/                     # Authentication pages
+│   │   ├── Blog/                     # Blog and article pages
+│   │   ├── Chat/                     # Chat pages
+│   │   ├── Contact/                  # Contact page
+│   │   ├── Dashboard/                # User dashboard
+│   │   ├── Games/                    # Brain games section
+│   │   ├── Health/                   # Health-related features
+│   │   ├── History/                  # User history pages
+│   │   ├── Home/                     # Landing page
+│   │   ├── Legal/                    # Privacy, Terms, etc.
+│   │   ├── Metrics/                  # Analytics and metrics
+│   │   ├── NotFound/                 # 404 page
+│   │   ├── Profile/                  # User profile
+│   │   └── User/                     # User settings and password management
+│   │
+│   ├── data/                         # Static datasets
+│   ├── hooks/                        # Custom React hooks
+│   ├── integrations/                 # External service integrations
+│   ├── lib/                          # Shared helper utilities
+│   ├── test/                         # Test utilities
+│   ├── App.tsx                       # Root application component
+│   ├── main.tsx                      # Application entry point
+│   └── vite-env.d.ts                 # Vite type definitions
+│
 ├── supabase/
-│   ├── functions/       # Edge functions (symptom-analyzer, delete-user-account)
-│   └── migrations/      # Database migrations
-├── package.json
-└── vite.config.ts
-
+│   ├── .branches/                    # Local Supabase branch metadata
+│   ├── .temp/                        # Temporary Supabase files
+│   ├── functions/                    # Edge Functions
+│   ├── migrations/                   # Database migrations
+│   └── config.toml                   # Supabase configuration
+│
+├── CHANGELOG.md                      # Release history
+├── CODE_OF_CONDUCT.md                # Community guidelines
+├── CONTRIBUTING.md                   # Contribution guide
+├── FAQ.md                            # Frequently asked questions
+├── README.md                         # Project documentation
+├── SECURITY.md                       # Security policy
+├── TROUBLESHOOT.md                   # Common issue resolutions
+├── package.json                      # Project dependencies
+└── vite.config.ts                    # Vite configuration
 ```
 
 ---
@@ -383,20 +426,62 @@ Current Functions:
 
 ```text
 symptom-scribe-clean/
-├── public/
+├── public/                           # Static assets
 ├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── hooks/
-│   ├── integrations/
-│   ├── utils/
-│   └── main.tsx
+│   ├── components/                   # Reusable and feature-based UI components
+│   │   ├── auth/                     # Authentication-related components
+│   │   ├── chat/                     # Chat interface components
+│   │   ├── common/                   # Shared components across features
+│   │   ├── diagnostics/              # Startup and diagnostic utilities
+│   │   ├── hero/                     # Landing page hero section
+│   │   ├── layout/                   # Layout and wrapper components
+│   │   ├── legal/                    # Legal page components
+│   │   ├── navigation/               # Navigation utilities
+│   │   ├── registration/             # Registration workflow components
+│   │   ├── theme/                    # Theme providers and styling
+│   │   └── ui/                       # Generic UI elements
+│   │
+│   ├── pages/                        # Route-level application pages
+│   │   ├── Auth/                     # Authentication pages
+│   │   ├── Blog/                     # Blog and article pages
+│   │   ├── Chat/                     # Chat pages
+│   │   ├── Contact/                  # Contact page
+│   │   ├── Dashboard/                # User dashboard
+│   │   ├── Games/                    # Brain games section
+│   │   ├── Health/                   # Health-related features
+│   │   ├── History/                  # User history pages
+│   │   ├── Home/                     # Landing page
+│   │   ├── Legal/                    # Privacy, Terms, etc.
+│   │   ├── Metrics/                  # Analytics and metrics
+│   │   ├── NotFound/                 # 404 page
+│   │   ├── Profile/                  # User profile
+│   │   └── User/                     # User settings and password management
+│   │
+│   ├── data/                         # Static datasets
+│   ├── hooks/                        # Custom React hooks
+│   ├── integrations/                 # External service integrations
+│   ├── lib/                          # Shared helper utilities
+│   ├── test/                         # Test utilities
+│   ├── App.tsx                       # Root application component
+│   ├── main.tsx                      # Application entry point
+│   └── vite-env.d.ts                 # Vite type definitions
+│
 ├── supabase/
-│   ├── functions/
-│   └── migrations/
-├── package.json
-├── vite.config.ts
-└── README.md
+│   ├── .branches/                    # Local Supabase branch metadata
+│   ├── .temp/                        # Temporary Supabase files
+│   ├── functions/                    # Edge Functions
+│   ├── migrations/                   # Database migrations
+│   └── config.toml                   # Supabase configuration
+│
+├── CHANGELOG.md                      # Release history
+├── CODE_OF_CONDUCT.md                # Community guidelines
+├── CONTRIBUTING.md                   # Contribution guide
+├── FAQ.md                            # Frequently asked questions
+├── README.md                         # Project documentation
+├── SECURITY.md                       # Security policy
+├── TROUBLESHOOT.md                   # Common issue resolutions
+├── package.json                      # Project dependencies
+└── vite.config.ts                    # Vite configuration
 ```
 
 ---
