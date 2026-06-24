@@ -193,34 +193,45 @@ The browser app and Supabase edge functions use different environment surfaces. 
 
 **Edge function secrets** (configure via Supabase Dashboard or CLI, not in `.env.local`):
 
-- `LOVABLE_API_KEY` — required by `supabase/functions/symptom-analyzer` to call the AI gateway.
+- `GEMINI_API_KEY` — recommended (free); used by `supabase/functions/symptom-analyzer` to call the Gemini API.
+- `OPENAI_API_KEY` — optional; used as an alternative key for OpenAI integration.
+- `LOVABLE_API_KEY` — optional; used as an alternative key for Lovable's AI gateway.
 - `UPSTASH_REDIS_REST_URL` — optional; enables distributed rate limiting when present.
 - `UPSTASH_REDIS_REST_TOKEN` — optional; used with `UPSTASH_REDIS_REST_URL` for Upstash-backed rate limiting.
-- `SUPABASE_URL` — required by edge functions that validate Supabase users or perform admin operations.
-- `SUPABASE_ANON_KEY` — required by auth-validating edge functions to validate callers.
-- `SUPABASE_SERVICE_ROLE_KEY` — required by account-deletion edge functions for server-side account deletion.
 - `TWILIO_ACCOUNT_SID` — required by `broadcast-emergency` when SMS alerts are used.
 - `TWILIO_AUTH_TOKEN` — required by `broadcast-emergency` when SMS alerts are used.
 - `TWILIO_PHONE_NUMBER` — required by `broadcast-emergency` as the sender phone number.
 - `WEBHOOK_SECRET` — optional; allows webhook-authenticated cache invalidation.
 
-**Configure secrets on your Supabase project:**
+**Configure your Supabase project & schema:**
 
 ```bash
+# Log in to your Supabase account
 supabase login
+
+# Link your local repo to your remote project
 supabase link --project-ref <your-project-ref>
-supabase secrets set LOVABLE_API_KEY=<your-key>
-supabase secrets set SUPABASE_URL=<your-url> SUPABASE_ANON_KEY=<your-anon-key> SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+
+# Push the database migrations to build tables, triggers, and functions
+supabase db push
+
+# Set your AI API key (obtain a free Gemini key from Google AI Studio)
+supabase secrets set GEMINI_API_KEY=<your-gemini-key>
+
+# Set emergency contact integration keys (optional)
 supabase secrets set TWILIO_ACCOUNT_SID=<sid> TWILIO_AUTH_TOKEN=<token> TWILIO_PHONE_NUMBER=<phone>
-# Optional rate limiting:
-supabase secrets set UPSTASH_REDIS_REST_URL=<url> UPSTASH_REDIS_REST_TOKEN=<token>
-# Optional webhook cache invalidation:
-supabase secrets set WEBHOOK_SECRET=<secret>
+
+# Deploy the Edge Functions
+supabase functions deploy symptom-analyzer
+supabase functions deploy broadcast-emergency
+supabase functions deploy delete-user-account
+supabase functions deploy invalidate-cache
 ```
 
 **Serve edge functions locally (optional):**
 
 ```bash
+# Add secrets to supabase/.env.local first, then serve
 supabase functions serve --env-file supabase/.env.local
 ```
 
@@ -261,19 +272,135 @@ Open:
 http://localhost:8080
 
 symptom-scribe-clean/
-├── public/              # Static files
+├── public/                                           # Static assets
 ├── src/
-│   ├── components/      # UI and reusable components
-│   ├── pages/           # App pages (Dashboard, Metrics, Chat, etc.)
-│   ├── integrations/    # Supabase & other service integrations
-│   ├── hooks/           # Custom React hooks
-│   └── main.tsx         # App entry point
+│   ├── components/
+│   │   ├── auth/
+│   │   │   └── ProtectedRoute.tsx                    # Route protection
+│   │   ├── chat/
+│   │   │   ├── ChatInterface.tsx                     # Main chat interface
+│   │   │   ├── ChatLoading.tsx                       # Loading state
+│   │   │   └── ChatMessage.tsx                       # Individual message
+│   │   ├── common/
+│   │   │   └── ErrorBoundary.tsx                     # Error handling
+│   │   ├── diagnostics/
+│   │   │   └── StartupDiagnostics.tsx                # Startup checks
+│   │   ├── hero/
+│   │   │   └── Hero.tsx                              # Landing page hero
+│   │   ├── layout/
+│   │   │   ├── AppSidebar.tsx                        # Sidebar navigation
+│   │   │   └── Layout.tsx                            # Shared layout
+│   │   ├── legal/
+│   │   │   ├── LegalPageLayout.tsx                   # Legal page wrapper
+│   │   │   ├── PageFooter.tsx                        # Footer component
+│   │   │   └── Section.tsx                           # Legal sections
+│   │   ├── navigation/
+│   │   │   ├── BackToTop.tsx                         # Back to top button
+│   │   │   └── ScrollToTop.tsx                       # Scroll manager
+│   │   ├── registration/
+│   │   │   ├── forms/
+│   │   │   │   └── MultiStepSignUp.tsx               # Registration form
+│   │   │   ├── shared/
+│   │   │   │   └── PasswordStrengthMeter.tsx         # Password strength indicator
+│   │   │   └── tests/
+│   │   │       └── PasswordStrengthMeter.test.tsx    # Registration tests
+│   │   ├── theme/
+│   │   │   ├── components/
+│   │   │   │   └── AnimatedThemeToggler.tsx          # Theme switcher
+│   │   │   ├── providers/
+│   │   │   │   └── theme-provider.tsx                # Theme provider
+│   │   │   └── styles/
+│   │   │       └── animated-theme-toggler.css        # Theme styles
+│   │   └── ui/                                       # Shared UI components
+│   ├── data/                                         # Static datasets
+│   ├── hooks/                                        # Custom React hooks
+│   ├── integrations/                                 # External integrations
+│   ├── lib/                                          # Utility functions
+│   ├── pages/
+│   │   ├── Auth/
+│   │   │   └── Index.tsx                             # Authentication page
+│   │   ├── Blog/
+│   │   │   ├── BlogPostPage.tsx                      # Blog details
+│   │   │   └── Index.tsx                             # Blog listin
+│   │   ├── Chat/
+│   │   │   └── Index.tsx                             # Chat page
+│   │   ├── Contact/
+│   │   │   └── Index.tsx                             # Contact page
+│   │   ├── Dashboard/
+│   │   │   ├── Dashboard.test.tsx                    # Dashboard tests
+│   │   │   └── Index.tsx                             # Dashboard page
+│   │   ├── Games/
+│   │   │   └── BrainGames.tsx                        # Brain games
+│   │   ├── Health/
+│   │   │   ├── AIHealthAssistant.tsx                 # AI assistant
+│   │   │   ├── Emergency.tsx                         # Emergency guide
+│   │   │   ├── HealthFacts.tsx                       # Health facts
+│   │   │   └── HealthLibrary.tsx                     # Health library
+│   │   ├── History/
+│   │   │   └── Index.tsx                             # User history
+│   │   ├── Home/
+│   │   │   └── Index.tsx                             # Home page
+│   │   ├── Legal/
+│   │   │   ├── Accessibility.tsx
+│   │   │   ├── Disclaimer.tsx
+│   │   │   ├── Privacy.tsx
+│   │   │   └── Terms.tsx
+│   │   ├── Metrics/
+│   │   │   └── Index.tsx                            # Metrics dashboard
+│   │   ├── NotFound/
+│   │   │   └── Index.tsx                            # 404 page
+│   │   ├── Profile/
+│   │   │   └── Index.tsx                            # Profile page
+│   │   └── User/
+│   │       ├── ResetPassword.tsx                    # Password reset
+│   │       └── Settings.tsx                         # User settings
+│   ├── test/
+│   │   ├── AllProviders.tsx                         # Test providers
+│   │   ├── setup.ts                                 # Test setup
+│   │   └── utils.tsx                                # Test utilities
+│   │
+│   ├── App.css                                      # Global styles
+│   ├── App.tsx                                      # Root component
+│   ├── index.css                                    # Base styles
+│   ├── main.tsx                                     # Entry point
+│   └── vite-env.d.ts                                # Vite typings
+│
 ├── supabase/
-│   ├── functions/       # Edge functions (symptom-analyzer, delete-user-account)
-│   └── migrations/      # Database migrations
-├── package.json
-└── vite.config.ts
-
+│   ├── .branches/                                   # Branch metadata
+│   ├── .temp/                                       # Temporary files
+│   ├── functions/                                   # Edge functions
+│   ├── migrations/                                  # Database migrations
+│   └── config.toml                                  # Supabase configuration
+│
+├── CHANGELOG.md                                     # Release history and updates
+├── CODE_OF_CONDUCT.md                               # Community guidelines
+├── CONTRIBUTING.md                                  # Contribution guide
+├── FAQ.md                                           # Frequently asked questions
+├── README.md                                        # Project documentation
+├── SECURITY.md                                      # Security policy
+├── TROUBLESHOOT.md                                  # Common issue resolutions
+├── components.json                                  # UI component configuration
+├── Dockerfile                                       # Docker container setup
+├── eslint.config.js                                 # ESLint configuration
+├── index.html                                       # Main HTML entry file
+├── nginx.conf                                       # Nginx server configuration
+├── package.json                                     # Project dependencies and scripts
+├── package-lock.json                                # Locked dependency versions
+├── postcss.config.js                                # PostCSS configuration
+├── tailwind.config.ts                               # Tailwind CSS configuration
+├── tsconfig.json                                    # TypeScript configuration
+├── tsconfig.app.json                                # App TypeScript settings
+├── tsconfig.node.json                               # Node TypeScript settings
+├── vite.config.ts                                   # Vite configuration
+├── .env.example                                     # Example environment variables
+├── .env.local                                       # Local environment variables
+├── .gitignore                                       # Git ignored files
+├── .dockerignore                                    # Docker ignored files
+├── .editorconfig                                    # Editor formatting rules
+├── .nvmrc                                           # Node.js version
+├── .prettierignore                                  # Prettier ignored files
+├── .prettierrc                                      # Prettier configuration
+└── bun.lockb                                        # Bun lock file
 ```
 
 ---
@@ -383,20 +510,135 @@ Current Functions:
 
 ```text
 symptom-scribe-clean/
-├── public/
+├── public/                                           # Static assets
 ├── src/
 │   ├── components/
+│   │   ├── auth/
+│   │   │   └── ProtectedRoute.tsx                    # Route protection
+│   │   ├── chat/
+│   │   │   ├── ChatInterface.tsx                     # Main chat interface
+│   │   │   ├── ChatLoading.tsx                       # Loading state
+│   │   │   └── ChatMessage.tsx                       # Individual message
+│   │   ├── common/
+│   │   │   └── ErrorBoundary.tsx                     # Error handling
+│   │   ├── diagnostics/
+│   │   │   └── StartupDiagnostics.tsx                # Startup checks
+│   │   ├── hero/
+│   │   │   └── Hero.tsx                              # Landing page hero
+│   │   ├── layout/
+│   │   │   ├── AppSidebar.tsx                        # Sidebar navigation
+│   │   │   └── Layout.tsx                            # Shared layout
+│   │   ├── legal/
+│   │   │   ├── LegalPageLayout.tsx                   # Legal page wrapper
+│   │   │   ├── PageFooter.tsx                        # Footer component
+│   │   │   └── Section.tsx                           # Legal sections
+│   │   ├── navigation/
+│   │   │   ├── BackToTop.tsx                         # Back to top button
+│   │   │   └── ScrollToTop.tsx                       # Scroll manager
+│   │   ├── registration/
+│   │   │   ├── forms/
+│   │   │   │   └── MultiStepSignUp.tsx               # Registration form
+│   │   │   ├── shared/
+│   │   │   │   └── PasswordStrengthMeter.tsx         # Password strength indicator
+│   │   │   └── tests/
+│   │   │       └── PasswordStrengthMeter.test.tsx    # Registration tests
+│   │   ├── theme/
+│   │   │   ├── components/
+│   │   │   │   └── AnimatedThemeToggler.tsx          # Theme switcher
+│   │   │   ├── providers/
+│   │   │   │   └── theme-provider.tsx                # Theme provider
+│   │   │   └── styles/
+│   │   │       └── animated-theme-toggler.css        # Theme styles
+│   │   └── ui/                                       # Shared UI components
+│   ├── data/                                         # Static datasets
+│   ├── hooks/                                        # Custom React hooks
+│   ├── integrations/                                 # External integrations
+│   ├── lib/                                          # Utility functions
 │   ├── pages/
-│   ├── hooks/
-│   ├── integrations/
-│   ├── utils/
-│   └── main.tsx
+│   │   ├── Auth/
+│   │   │   └── Index.tsx                             # Authentication page
+│   │   ├── Blog/
+│   │   │   ├── BlogPostPage.tsx                      # Blog details
+│   │   │   └── Index.tsx                             # Blog listin
+│   │   ├── Chat/
+│   │   │   └── Index.tsx                             # Chat page
+│   │   ├── Contact/
+│   │   │   └── Index.tsx                             # Contact page
+│   │   ├── Dashboard/
+│   │   │   ├── Dashboard.test.tsx                    # Dashboard tests
+│   │   │   └── Index.tsx                             # Dashboard page
+│   │   ├── Games/
+│   │   │   └── BrainGames.tsx                        # Brain games
+│   │   ├── Health/
+│   │   │   ├── AIHealthAssistant.tsx                 # AI assistant
+│   │   │   ├── Emergency.tsx                         # Emergency guide
+│   │   │   ├── HealthFacts.tsx                       # Health facts
+│   │   │   └── HealthLibrary.tsx                     # Health library
+│   │   ├── History/
+│   │   │   └── Index.tsx                             # User history
+│   │   ├── Home/
+│   │   │   └── Index.tsx                             # Home page
+│   │   ├── Legal/
+│   │   │   ├── Accessibility.tsx
+│   │   │   ├── Disclaimer.tsx
+│   │   │   ├── Privacy.tsx
+│   │   │   └── Terms.tsx
+│   │   ├── Metrics/
+│   │   │   └── Index.tsx                            # Metrics dashboard
+│   │   ├── NotFound/
+│   │   │   └── Index.tsx                            # 404 page
+│   │   ├── Profile/
+│   │   │   └── Index.tsx                            # Profile page
+│   │   └── User/
+│   │       ├── ResetPassword.tsx                    # Password reset
+│   │       └── Settings.tsx                         # User settings
+│   ├── test/
+│   │   ├── AllProviders.tsx                         # Test providers
+│   │   ├── setup.ts                                 # Test setup
+│   │   └── utils.tsx                                # Test utilities
+│   │
+│   ├── App.css                                      # Global styles
+│   ├── App.tsx                                      # Root component
+│   ├── index.css                                    # Base styles
+│   ├── main.tsx                                     # Entry point
+│   └── vite-env.d.ts                                # Vite typings
+│
 ├── supabase/
-│   ├── functions/
-│   └── migrations/
-├── package.json
-├── vite.config.ts
-└── README.md
+│   ├── .branches/                                   # Branch metadata
+│   ├── .temp/                                       # Temporary files
+│   ├── functions/                                   # Edge functions
+│   ├── migrations/                                  # Database migrations
+│   └── config.toml                                  # Supabase configuration
+│
+├── CHANGELOG.md                                     # Release history and updates
+├── CODE_OF_CONDUCT.md                               # Community guidelines
+├── CONTRIBUTING.md                                  # Contribution guide
+├── FAQ.md                                           # Frequently asked questions
+├── README.md                                        # Project documentation
+├── SECURITY.md                                      # Security policy
+├── TROUBLESHOOT.md                                  # Common issue resolutions
+├── components.json                                  # UI component configuration
+├── Dockerfile                                       # Docker container setup
+├── eslint.config.js                                 # ESLint configuration
+├── index.html                                       # Main HTML entry file
+├── nginx.conf                                       # Nginx server configuration
+├── package.json                                     # Project dependencies and scripts
+├── package-lock.json                                # Locked dependency versions
+├── postcss.config.js                                # PostCSS configuration
+├── tailwind.config.ts                               # Tailwind CSS configuration
+├── tsconfig.json                                    # TypeScript configuration
+├── tsconfig.app.json                                # App TypeScript settings
+├── tsconfig.node.json                               # Node TypeScript settings
+├── vite.config.ts                                   # Vite configuration
+├── .env.example                                     # Example environment variables
+├── .env.local                                       # Local environment variables
+├── .gitignore                                       # Git ignored files
+├── .dockerignore                                    # Docker ignored files
+├── .editorconfig                                    # Editor formatting rules
+├── .nvmrc                                           # Node.js version
+├── .prettierignore                                  # Prettier ignored files
+├── .prettierrc                                      # Prettier configuration
+└── bun.lockb                                        # Bun lock file
 ```
 
 ---

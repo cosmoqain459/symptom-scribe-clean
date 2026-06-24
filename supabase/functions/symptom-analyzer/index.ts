@@ -24,48 +24,23 @@ const getCorsHeaders = (origin: string | null) => ({
 serve(async (req: Request): Promise<Response> => {
   const origin = req.headers.get("origin");
 
-  if (origin) {
-    if (!ALLOWED_ORIGINS.includes(origin)) {
-      return jsonResponse(
-        { error: "Origin not allowed" },
-        403,
-        getCorsHeaders(origin)
-      );
-    }
-  } else {
-    // Non-browser client request (missing Origin header). Require a valid verified token.
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return jsonResponse(
-        { error: "Authentication required for non-browser requests" },
-        401,
-        getCorsHeaders(null)
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+  // 1. Origin allowlist check
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return jsonResponse(
+      { error: "Origin not allowed" },
+      403,
+      getCorsHeaders(origin)
     );
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-
-    if (userError || !user) {
-      return jsonResponse(
-        { error: "Invalid or expired authorization token" },
-        401,
-        getCorsHeaders(null)
-      );
-    }
   }
+
+  // 2. CORS preflight — must come before any auth logic
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: getCorsHeaders(origin),
     });
   }
 
-  // Enforce JWT validation for ALL non-preflight requests to prevent token budget exhaustion
+  // 3. Enforce JWT for all non-OPTIONS requests
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
     return jsonResponse(
