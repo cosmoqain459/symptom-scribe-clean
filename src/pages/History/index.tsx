@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, X, Trash2, Search } from "lucide-react";
+import { CheckCircle, X, Trash2, Search, ClipboardList } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError } from "@/lib/toast-helpers";
 import { db, syncOfflineData, encryptSymptom, decryptSymptom } from "@/lib/offline-db";
@@ -40,6 +41,7 @@ const History = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState("all");
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
@@ -272,9 +274,7 @@ const History = () => {
     }
   };
 
-  // The history state is already filtered by fetchHistory using blind indexes and severity
   const filteredHistory = history;
-
   const isFiltering = searchQuery.trim() !== "" || severityFilter !== "all";
 
   return (
@@ -328,9 +328,9 @@ const History = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { 
-              setSearchQuery(""); 
-              setSeverityFilter("all"); 
+            onClick={() => {
+              setSearchQuery("");
+              setSeverityFilter("all");
             }}
             className="gap-2"
           >
@@ -343,11 +343,24 @@ const History = () => {
       {loading ? (
         <p className="text-center text-muted-foreground">Loading history...</p>
       ) : history.length === 0 ? (
+        /* ── IMPROVED EMPTY STATE ── */
         <Card>
-          <CardContent className="pt-6 text-center space-y-2">
-            <p className="text-muted-foreground">
-              No symptom history yet. Start by consulting with the AI Assistant!
-            </p>
+          <CardContent className="py-14 flex flex-col items-center text-center gap-4">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-teal-50 dark:bg-teal-950">
+              <ClipboardList className="w-8 h-8 text-teal-600 dark:text-teal-400" strokeWidth={1.5} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-foreground">No consultations yet</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Your symptom history will appear here after your first AI consultation.
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate("/ai-health-assistant")}
+              className="bg-teal-600 hover:bg-teal-700 text-white mt-2"
+            >
+              Start AI Consultation
+            </Button>
           </CardContent>
         </Card>
       ) : filteredHistory.length === 0 ? (
