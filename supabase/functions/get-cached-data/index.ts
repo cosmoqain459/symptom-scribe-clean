@@ -7,12 +7,11 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:8080",
   "https://symptom-scribe.vercel.app",
-  "https://symptom-scribe-clean.netlify.app",
 ];
 
 const getCorsHeaders = (origin: string | null) => ({
   "Access-Control-Allow-Origin":
-    origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+    origin && ALLOWED_ORIGINS.includes(origin) ? origin : "null",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 });
@@ -20,18 +19,19 @@ const getCorsHeaders = (origin: string | null) => ({
 serve(async (req) => {
   const origin = req.headers.get("origin");
 
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: getCorsHeaders(origin),
-    });
-  }
-
   if (origin && !ALLOWED_ORIGINS.includes(origin)) {
     return new Response(JSON.stringify({ error: "Origin not allowed" }), {
       status: 403,
       headers: { ...getCorsHeaders(origin), "Content-Type": "application/json" },
     });
   }
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: getCorsHeaders(origin),
+    });
+  }
+
   try {
     // Rate limit check
     const ip =
