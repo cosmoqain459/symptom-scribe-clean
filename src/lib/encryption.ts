@@ -356,6 +356,23 @@ export async function encryptProfileArray(
   return await encryptText(jsonString, key);
 }
 
+export async function decryptProfileField(
+  value: string | null | undefined,
+  key: CryptoKey
+): Promise<string> {
+  if (!value) return "";
+  return await decryptText(value, key);
+}
+
+export async function decryptProfileArray(
+  value: string | null | undefined,
+  key: CryptoKey
+): Promise<string[]> {
+  if (!value) return [];
+  const jsonString = await decryptText(value, key);
+  return JSON.parse(jsonString);
+}
+
 // ─── P2P Emergency Mesh Signatures ──────────────────────────────────────────
 export async function getP2PSigningKeys(): Promise<{ privateKey: CryptoKey; publicKey: CryptoKey }> {
   const storedPrivate = localStorage.getItem("symptom_scribe_p2p_private_key");
