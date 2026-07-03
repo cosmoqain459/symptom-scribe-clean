@@ -52,10 +52,15 @@ serve(async (req) => {
     );
 
     // Get the current user
+    // NOTE: auth.getUser() with no argument relies on a client-side session
+    // (e.g. set via signIn/setSession) which never exists on the server.
+    // We must explicitly pass the bearer token extracted from the request,
+    // the same way every other edge function in this project does.
+    const token = authHeader.replace("Bearer ", "");
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser();
+    } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
       return new Response(
