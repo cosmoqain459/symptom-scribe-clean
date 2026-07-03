@@ -262,16 +262,59 @@ export function registerEncryptionHooks(callbacks: {
 }
 
 async function handleSessionChange(session: Session) {
+  const userId = session.user?.id;
+  if (!userId) return;
+
   const token = session.access_token;
   if (!token) return;
 
-  if (token === lastToken) return;
+  // Synchronize user salt across devices
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("encryption_salt")
+      .eq("user_id", userId)
+      .maybeSingle();
 
+    const dbSalt = profile?.encryption_salt;
+    const localSalt = localStorage.getItem(SALT_KEY_PREFIX + userId);
+
+    if (dbSalt) {
+      if (dbSalt !== localSalt) {
+        localStorage.setItem(SALT_KEY_PREFIX + userId, dbSalt);
+      }
+    } else {
+      const activeSalt = localSalt || (() => {
+        const newSalt = crypto.getRandomValues(new Uint8Array(16));
+        return Array.from(newSalt)
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      })();
+
+      localStorage.setItem(SALT_KEY_PREFIX + userId, activeSalt);
+
+      // Save salt to both the database profile and user metadata
+      await Promise.all([
+        supabase.from("profiles").upsert({
+          user_id: userId,
+          encryption_salt: activeSalt,
+        }, { onConflict: "user_id" }),
+        supabase.auth.updateUser({
+          data: { encryption_salt: activeSalt }
+        })
+      ]).catch((syncErr) => {
+        console.warn("Failed to sync salt to Supabase profiles or auth metadata:", syncErr);
+      });
+    }
+  } catch (saltErr) {
+    console.error("Failed to sync encryption salt from profiles:", saltErr);
+  }
+
+  if (token === lastToken) return;
 
   const prevToken = lastToken;
 
   try {
-    const userId = session.user?.id;
     const newKey = await deriveKeyFromToken(token, userId);
     const newSearchKey = await deriveSearchKeyFromToken(token, userId);
 
@@ -285,12 +328,10 @@ async function handleSessionChange(session: Session) {
 
     setKeys(newKey, newSearchKey);
     lastToken = token;
-    // Removed: localStorage.setItem("symptom_scribe_last_token", token)
   } catch (error) {
     console.error("Failed to derive or rotate encryption keys:", error);
     setKeys(null, null);
     lastToken = null;
-    // Removed: localStorage.removeItem("symptom_scribe_last_token")
   }
 }
 
