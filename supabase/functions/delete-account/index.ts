@@ -9,11 +9,6 @@ const ALLOWED_ORIGINS = [
 ];
 
 const getCorsHeaders = (origin: string | null) => ({
-  // Previously fell back to ALLOWED_ORIGINS[0] ("http://localhost:3000") for
-  // any disallowed origin, which meant a preflight from an untrusted origin
-  // could still receive a permissive Access-Control-Allow-Origin header on
-  // this irreversible, destructive endpoint. Deny by default instead,
-  // consistent with get-cached-data / invalidate-cache / symptom-analyzer.
   "Access-Control-Allow-Origin":
     origin && ALLOWED_ORIGINS.includes(origin) ? origin : "null",
   "Access-Control-Allow-Headers":
