@@ -261,17 +261,84 @@ export function registerEncryptionHooks(callbacks: {
   onTokenRefreshCallback = callbacks.onTokenRefresh;
 }
 
+const SEED_KEY_PREFIX = "symptom_scribe_master_seed_";
+
+// Helper to derive stable master seed from password + email using PBKDF2
+export async function deriveSeedFromPassword(password: string, email: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  // Use email as a stable salt for password derivation
+  const salt = encoder.encode(email.toLowerCase().trim());
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    baseKey,
+    256
+  );
+  return arrayBufferToHex(derivedBits);
+}
+
+// Function called during login/signup/password-change to store seed and active keys
+export async function setupKeysFromPassword(password: string, email: string, userId: string): Promise<void> {
+  const seed = await deriveSeedFromPassword(password, email);
+  localStorage.setItem(SEED_KEY_PREFIX + userId, seed);
+
+  const newKey = await deriveKeyFromToken(seed, userId);
+  const newSearchKey = await deriveSearchKeyFromToken(seed, userId);
+  setKeys(newKey, newSearchKey);
+  lastToken = seed;
+}
+
+// Helper to trigger Key Rotation for components (like Settings page password change)
+export async function triggerKeyRotation(
+  oldKey: CryptoKey,
+  newKey: CryptoKey,
+  oldSearchKey: CryptoKey,
+  newSearchKey: CryptoKey
+): Promise<void> {
+  if (onTokenRefreshCallback) {
+    await onTokenRefreshCallback(oldKey, newKey, oldSearchKey, newSearchKey);
+  }
+}
+
 async function handleSessionChange(session: Session) {
+  const userId = session.user?.id;
+  if (!userId) return;
+
+  // Try to load the stable master seed from local storage
+  const savedSeed = localStorage.getItem(SEED_KEY_PREFIX + userId);
+  if (savedSeed) {
+    if (savedSeed === lastToken) return;
+    try {
+      const newKey = await deriveKeyFromToken(savedSeed, userId);
+      const newSearchKey = await deriveSearchKeyFromToken(savedSeed, userId);
+      setKeys(newKey, newSearchKey);
+      lastToken = savedSeed;
+    } catch (error) {
+      console.error("Failed to derive encryption keys from saved seed:", error);
+    }
+    return;
+  }
+
+  // Fallback to access_token for legacy sessions (backward compatibility)
   const token = session.access_token;
   if (!token) return;
 
   if (token === lastToken) return;
 
-
   const prevToken = lastToken;
 
   try {
-    const userId = session.user?.id;
     const newKey = await deriveKeyFromToken(token, userId);
     const newSearchKey = await deriveSearchKeyFromToken(token, userId);
 
@@ -285,24 +352,23 @@ async function handleSessionChange(session: Session) {
 
     setKeys(newKey, newSearchKey);
     lastToken = token;
-    // Removed: localStorage.setItem("symptom_scribe_last_token", token)
   } catch (error) {
     console.error("Failed to derive or rotate encryption keys:", error);
     setKeys(null, null);
     lastToken = null;
-    // Removed: localStorage.removeItem("symptom_scribe_last_token")
   }
 }
 
 async function handleSessionClear() {
-  // Clear the per-user PBKDF2 salt from localStorage on logout so it does
-  // not persist across sessions. userId must be captured before keys are nulled.
+  // Clear user-specific data on logout
   const { data: { user } } = await supabase.auth.getUser();
-  if (user?.id) clearUserSalt(user.id);
+  if (user?.id) {
+    clearUserSalt(user.id);
+    localStorage.removeItem(SEED_KEY_PREFIX + user.id);
+  }
 
   setKeys(null, null);
   lastToken = null;
-  // Removed: localStorage.removeItem("symptom_scribe_last_token")
   if (onLogoutCallback) {
     await onLogoutCallback();
   }
