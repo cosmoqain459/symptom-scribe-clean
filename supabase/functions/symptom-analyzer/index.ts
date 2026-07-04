@@ -10,10 +10,17 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:8080",
   "https://symptom-scribe.vercel.app",
+  "https://symptom-scribe-clean.netlify.app",
 ];
 
+const NETLIFY_PREVIEW_ORIGIN = /^https:\/\/deploy-preview-\d+--symptom-scribe-clean\.netlify\.app$/;
+
+function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED_ORIGINS.includes(origin) || NETLIFY_PREVIEW_ORIGIN.test(origin);
+}
+
 const getCorsHeaders = (origin: string | null) => ({
-  "Access-Control-Allow-Origin": origin && ALLOWED_ORIGINS.includes(origin) ? origin : "null",
+  "Access-Control-Allow-Origin": origin && isAllowedOrigin(origin) ? origin : "null",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 });
 
@@ -21,7 +28,7 @@ serve(async (req: Request): Promise<Response> => {
   const origin = req.headers.get("origin");
 
   // 1. Origin allowlist check
-  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && !isAllowedOrigin(origin)) {
     return jsonResponse({ error: "Origin not allowed" }, 403, getCorsHeaders(origin));
   }
 
@@ -199,10 +206,45 @@ You MUST set the Severity Level to High, and strongly advise immediate professio
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
 
+   
+    function extractTextChunks(parsed: unknown): string[] {
+      const candidate = (parsed as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
+        ?.candidates?.[0];
+      const parts = candidate?.content?.parts ?? [];
+      return parts.map((p) => p?.text).filter((t): t is string => Boolean(t));
+    }
+
     const stream = new ReadableStream({
       async start(controller) {
         const reader = geminiResponse.body!.getReader();
         let buffer = "";
+        let closed = false;
+
+        const safeClose = () => {
+          if (closed) return;
+          closed = true;
+          controller.close();
+        };
+
+        const processLine = (line: string) => {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) return;
+
+          const jsonStr = trimmed.slice(5).trim();
+          if (!jsonStr || jsonStr === "[DONE]") return;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            for (const chunkText of extractTextChunks(parsed)) {
+              const payload = `data: ${JSON.stringify({
+                choices: [{ delta: { content: chunkText } }],
+              })}\n\n`;
+              controller.enqueue(encoder.encode(payload));
+            }
+          } catch (parseErr) {
+            console.error("Failed to parse Gemini SSE chunk:", parseErr, jsonStr);
+          }
+        };
 
         try {
           while (true) {
@@ -213,32 +255,31 @@ You MUST set the Severity Level to High, and strongly advise immediate professio
             const lines = buffer.split("\n");
             buffer = lines.pop() ?? "";
 
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed.startsWith("data:")) continue;
-
-              const jsonStr = trimmed.slice(5).trim();
-              if (!jsonStr || jsonStr === "[DONE]") continue;
-
-              try {
-                const parsed = JSON.parse(jsonStr);
-                const chunkText = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (chunkText) {
-                  const payload = `data: ${JSON.stringify({
-                    choices: [{ delta: { content: chunkText } }],
-                  })}\n\n`;
-                  controller.enqueue(encoder.encode(payload));
-                }
-              } catch (parseErr) {
-                console.error("Failed to parse Gemini SSE chunk:", parseErr, jsonStr);
-              }
-            }
+            for (const line of lines) processLine(line);
           }
+
+          buffer += decoder.decode(); // flush any pending multi-byte sequence
+          if (buffer.trim()) processLine(buffer);
+
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch (streamErr) {
           console.error("Error while relaying Gemini stream:", streamErr);
-        } finally {
+          // Let the client distinguish "generation finished" from
+          // "generation broke midway" instead of only ever seeing [DONE].
+          const errorPayload = `data: ${JSON.stringify({
+            error: "Stream interrupted while generating the response.",
+          })}\n\n`;
+          controller.enqueue(encoder.encode(errorPayload));
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
+        } finally {
+          safeClose();
+        }
+      },
+      cancel(reason) {
+        try {
+          reader.cancel(reason);
+        } catch {
+          // reader may already be closed/released — safe to ignore.
         }
       },
     });
