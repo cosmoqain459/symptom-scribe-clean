@@ -120,22 +120,20 @@ export function AppSidebar() {
             {/* ✨ updated: small gap between rows so the tinted active state has breathing room */}
             <SidebarMenu className="px-1">
               {menuItems.map((item) => {
-                // NavLink's className function doesn't survive the SidebarMenuButton
-                // Slot (asChild) merge, so derive the active state ourselves and put
-                // the classes on the button as a plain string. Active = solid primary
-                // pill; hover uses a neutral grey (not the theme accent) via `!` so it
-                // overrides the built-in hover/active variant classes.
+                // Only addition vs. the previous sidebar: a working active-tab
+                // indicator (tinted bg + left accent border). Everything else,
+                // including the hover lift, is kept as it was.
                 const isActive = location.pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className={
+                      className={`py-2 rounded-md transition-all duration-300 ease-in-out hover:scale-[1.03] hover:-translate-y-1 hover:shadow-md ${
                         isActive
-                          ? "py-2 rounded-md font-semibold !bg-sidebar-primary !text-sidebar-primary-foreground hover:!bg-sidebar-primary"
-                          : "py-2 rounded-md text-sidebar-foreground/70 hover:!bg-sidebar-foreground/10 hover:!text-sidebar-foreground"
-                      }
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium border-l-2 border-sidebar-ring"
+                          : "border-l-2 border-transparent text-sidebar-foreground/80"
+                      }`}
                     >
                       <NavLink to={item.url} end onClick={handleNavClick}>
                         <item.icon className="h-[17px] w-[17px]" />
