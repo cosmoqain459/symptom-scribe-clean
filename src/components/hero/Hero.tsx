@@ -128,14 +128,82 @@ const Hero = () => {
           {featurePills.map((pill) => (
             <motion.div
               key={pill.title}
-              initial={{ opacity: 0, y: 25 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: pill.delay, ease: "easeOut" }}
-              className="bg-card/50 backdrop-blur-sm border border-border/60 rounded-2xl p-6 text-center shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 group"
+            initial={{
+              opacity: 0,
+              y: 35,
+              scale: 0.96,
+            }}
+            animate={{
+              opacity: 1,
+              y: [0, -4, 0, 4, 0],
+              rotate: [0, 0.5, 0, -0.5, 0],
+              scale: 1,
+            }}
+
+            transition={{
+              delay: pill.delay,
+              type: "spring",
+              stiffness: 120,
+              damping: 18,
+              rotate: {
+                duration: 7,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: pill.delay,
+              },
+              y: {
+                duration: 7,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: pill.delay,
+              },
+            }}
+            whileHover={{
+              y: -8,
+              scale: 1.03,
+              rotateX: 2,
+              rotateY: -2,
+              transition: {
+                type: "spring",
+                stiffness: 380,
+                damping: 22,
+                mass: 0.7,
+              },
+            }}
+              className="group relative bg-card/70 backdrop-blur-xl border border-border/60 rounded-2xl p-6 text-center shadow-sm hover:border-primary/40 hover:shadow-2xl"
             >
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+  
+              <motion.div
+                  whileHover={{
+                    scale: 1.15,
+                    rotate: 10,
+                    y: -4,
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  animate={{
+                    opacity: 1,
+                    y: [0, -4, 0],
+                    scale: 1,
+                  }}
+                  transition={{
+                    y: {
+                      duration: 4,
+                      repeat: Infinity,
+                      repeatType: "mirror",
+                      ease: "easeInOut",
+                    },
+                    opacity: {
+                      duration: 0.6,
+                    },
+                    scale: {
+                      duration: 0.6,
+                    },
+                  }}
+                  className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors duration-300">
+                    
                 <pill.icon className="w-6 h-6 text-primary" />
-              </div>
+              </motion.div>
               <h3 className="text-foreground font-bold mb-2 text-lg">
                 {pill.title}
               </h3>
