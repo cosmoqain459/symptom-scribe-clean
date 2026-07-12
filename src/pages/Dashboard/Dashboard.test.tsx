@@ -55,27 +55,32 @@ vi.mock("@/lib/encryption", () => ({
   generateSearchTokens: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("@/lib/offline-db", () => ({
-  db: {
-    healthMetrics: {
-      clear: vi.fn(),
-      toArray: vi.fn().mockResolvedValue([]),
-      bulkPut: vi.fn(),
-      put: vi.fn(),
+vi.mock("@/lib/offline-db", () => {
+  const mockTable = {
+    clear: vi.fn(),
+    toArray: vi.fn().mockResolvedValue([]),
+    bulkPut: vi.fn(),
+    put: vi.fn(),
+    where: vi.fn().mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        filter: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    }),
+  };
+  return {
+    db: {
+      healthMetrics: mockTable,
+      symptomHistory: mockTable,
     },
-    symptomHistory: {
-      clear: vi.fn(),
-      toArray: vi.fn().mockResolvedValue([]),
-      bulkPut: vi.fn(),
-      put: vi.fn(),
-    },
-  },
-  decryptSymptom: vi.fn((s) => s),
-  decryptMetric: vi.fn((m) => m),
-  encryptSymptom: vi.fn((s) => s),
-  encryptMetric: vi.fn((m) => m),
-  syncOfflineData: vi.fn().mockResolvedValue(false),
-}));
+    decryptSymptom: vi.fn((s) => s),
+    decryptMetric: vi.fn((m) => m),
+    encryptSymptom: vi.fn((s) => s),
+    encryptMetric: vi.fn((m) => m),
+    syncOfflineData: vi.fn().mockResolvedValue(false),
+  };
+});
 
 // Mock react-countup so it renders plain numbers synchronously (avoids
 // animation timers interfering with assertions)
