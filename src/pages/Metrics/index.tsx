@@ -29,7 +29,7 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import type { Json } from "@/integrations/supabase/types";
-import { showSuccess, showError } from "@/lib/toast-helpers";
+import { showSuccess, showError, showWarning, showInfo } from "@/lib/toast-helpers";
 import { useMetricsHistory } from "@/hooks/useMetricsHistory";
 import { db, syncOfflineData, type OfflineMetric, encryptMetric } from "@/lib/offline-db";
 import { whenKeysReady } from "@/lib/encryption";
@@ -316,17 +316,30 @@ const Metrics = () => {
 
       if (navigator.onLine) {
         const { pending_sync, pending_delete, ...supabaseData } = encryptedRecord;
-        const { error } = await supabase.from("health_metrics").insert(supabaseData);
+        try {
+          const { error } = await supabase.from("health_metrics").insert(supabaseData);
+          if (error) throw error;
 
-        if (error) throw error;
+          await invalidateCache("health_metrics");
+          await db.healthMetrics.put(encryptedRecord);
 
-        await invalidateCache("health_metrics");
-        await db.healthMetrics.put(encryptedRecord);
+          showSuccess(
+            `${metricLabel} Recorded`,
+            "Your health metric has been saved successfully.",
+          );
+        } catch (supabaseError) {
+          console.warn("Supabase insert failed, falling back to local saving:", supabaseError);
+          const fallbackRecord = {
+            ...encryptedRecord,
+            pending_sync: 1,
+          };
+          await db.healthMetrics.put(fallbackRecord);
 
-        showSuccess(
-          `${metricLabel} Recorded`,
-          "Your health metric has been saved successfully.",
-        );
+          showWarning(
+            `${metricLabel} Saved Offline`,
+            "Could not connect to server. Saved locally and will sync once connection is restored."
+          );
+        }
       } else {
         await db.healthMetrics.put(encryptedRecord);
 
