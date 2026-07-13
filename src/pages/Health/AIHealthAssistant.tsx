@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { showSuccess, showError, showInfo, showLoading } from "@/lib/toast-helpers";
+import { showSuccess, showError, showInfo, showLoading, showWarning } from "@/lib/toast-helpers";
 import { browserEnv } from "@/lib/env";
 import { invalidateCache } from "@/lib/cached-queries";
 import { whenKeysReady } from "@/lib/encryption";
@@ -332,8 +332,20 @@ const AIHealthAssistant = () => {
               .insert(supabaseRecord);
 
             if (insertError) {
-              console.error("Error saving symptom history:", insertError);
-              showError("Save failed", "Could not save to your health history");
+              console.warn("Supabase save failed, falling back to local saving:", insertError);
+              
+              // Save locally to Dexie immediately with pending_sync: 1
+              await db.symptomHistory.put({
+                ...encryptedRecord,
+                pending_sync: 1,
+                pending_update: 0,
+                pending_delete: 0,
+              });
+
+              showWarning(
+                "Saved Offline",
+                "Could not connect to server. Saved locally and will sync once connection is restored."
+              );
             } else {
               await invalidateCache("symptom_history");
 
