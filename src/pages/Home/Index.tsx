@@ -172,7 +172,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
 
       <header 
-        className={`px-6 py-1 sticky top-0 z-50 transition-all duration-300 ${
+        className={`absolute top-0 left-0 w-full px-6 py-1 z-50 ${
           isScrolled 
             ? "bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm" 
             : "bg-background/0 border-transparent"
